@@ -1,0 +1,12 @@
+## Interface: 50504
+## Title: |cFF009900Kehet's|r AutoRoll
+## Notes: Roll on group loot automatically with rules you edit
+## Author: Kehet
+## Version: @project-version@
+## OptionalDeps: Ace3
+## SavedVariables: KehetsAutoRollDB
+
+embeds.xml
+Kehets_AutoRoll_Rules.lua
+Kehets_AutoRoll.lua
+Kehets_AutoRoll_Options.lua
