@@ -42,6 +42,7 @@ function AutoRoll:EnsureRules()
     if not self.db.profile.rules then
         self.db.profile.rules = CopyTable(ns.DEFAULT_RULES)
     end
+    ns.MigrateRules(self.db.profile.rules)
 end
 
 function AutoRoll:OnProfileUpdated()
@@ -92,7 +93,9 @@ function AutoRoll:HandleRoll(rollID, item)
 end
 
 function AutoRoll:ExplainRules(item)
-    self:Announce("  " .. ns.DescribeFacts(item))
+    local rolls, details = ns.DescribeFacts(item)
+    self:Announce("  " .. rolls)
+    self:Announce("  " .. details)
     for index, rule in ipairs(self.db.profile.rules) do
         self:Announce(string.format("  %d. %s: %s", index, rule.name, ns.ExplainRule(rule, item) or "matches"))
     end
@@ -141,7 +144,9 @@ function AutoRoll:TestItem(link)
         local item = ns.DescribeItem(link, { canNeed = true, canGreed = true, canDisenchant = true })
         local rule, index = ns.Evaluate(self.db.profile.rules, item)
 
-        self:Print(link .. ": " .. ns.DescribeFacts(item))
+        local rolls, details = ns.DescribeFacts(item)
+        self:Print(link .. ": " .. rolls)
+        self:Print("  " .. details)
         if rule then
             local action = ns.ACTIONS[rule.action]
             self:Print(string.format("Would %s%s|r (rule %d: %s)", action.color, action.label, index, rule.name))

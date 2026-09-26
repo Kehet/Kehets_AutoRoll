@@ -5,6 +5,17 @@ local GetItemInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
 local GetItemInfoInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
 local GetDetailedItemLevelInfo = C_Item and C_Item.GetDetailedItemLevelInfo or GetDetailedItemLevelInfo
 local GetItemClassInfo = C_Item and C_Item.GetItemClassInfo or GetItemClassInfo
+local GetItemSubClassInfo = C_Item and C_Item.GetItemSubClassInfo or GetItemSubClassInfo
+local GetItemCount = C_Item and C_Item.GetItemCount or GetItemCount
+local IsEquippedItem = C_Item and C_Item.IsEquippedItem or IsEquippedItem
+
+local function CopySet(set)
+    local copy = {}
+    for key, value in pairs(set) do
+        copy[key] = value
+    end
+    return copy
+end
 
 ns.ACTIONS = {
     need = { label = "Need", rollType = 1, color = "|cFF33FF33" },
@@ -20,6 +31,9 @@ ns.OPERATORS = {
     ["<="] = { label = "at most", test = function(a, b) return a <= b end },
     ["=="] = { label = "is", test = function(a, b) return a == b end },
     ["~="] = { label = "is not", test = function(a, b) return a ~= b end },
+    -- The value of these two is a set of accepted values, { [value] = true }
+    oneOf = { label = "is", isSet = true, test = function(a, b) return b[a] == true end },
+    noneOf = { label = "is not", isSet = true, test = function(a, b) return b[a] ~= true end },
     [">="] = { label = "at least", test = function(a, b) return a >= b end },
     [">"] = { label = "greater than", test = function(a, b) return a > b end },
     contains = {
@@ -35,8 +49,8 @@ ns.OPERATORS = {
 -- Operators offered for each kind of condition value. Boolean conditions have no operator.
 ns.OPERATOR_SETS = {
     number = { "<", "<=", "==", "~=", ">=", ">" },
-    quality = { "<", "<=", "==", "~=", ">=", ">" },
-    select = { "==", "~=" },
+    quality = { "oneOf", "noneOf", "<", "<=", ">=", ">" },
+    select = { "oneOf", "noneOf" },
     text = { "contains", "notContains" },
 }
 
@@ -51,6 +65,88 @@ local function ItemClassValues()
         end
     end
     return values
+end
+
+-- Item types offered for the subtype condition
+local SUBCLASS_ITEM_CLASSES = { 0, 2, 4, 7, 9, 15 }
+
+-- Zero-padded so the settings dropdown, which sorts by key, groups subtypes by item type
+local function SubclassKey(classID, subclassID)
+    return string.format("%02d:%02d", classID, subclassID)
+end
+
+-- Labels look like "Armor: Cloth"
+local function ItemSubclassValues()
+    local values = {}
+    for _, classID in ipairs(SUBCLASS_ITEM_CLASSES) do
+        local className = GetItemClassInfo(classID)
+        for subclassID = 0, 20 do
+            local name = GetItemSubClassInfo(classID, subclassID)
+            if className and name and name ~= "" then
+                values[SubclassKey(classID, subclassID)] = className .. ": " .. name
+            end
+        end
+    end
+    return values
+end
+
+-- Rule keys for equip locations. Readable keys keep saved rules stable, and the settings
+-- dropdown sorts by key, so they also give a roughly alphabetical list.
+local EQUIP_SLOT_KEYS = {
+    INVTYPE_HEAD = "head",
+    INVTYPE_NECK = "neck",
+    INVTYPE_SHOULDER = "shoulder",
+    INVTYPE_CLOAK = "back",
+    INVTYPE_CHEST = "chest",
+    INVTYPE_ROBE = "chest",
+    INVTYPE_BODY = "shirt",
+    INVTYPE_TABARD = "tabard",
+    INVTYPE_WRIST = "wrist",
+    INVTYPE_HAND = "hands",
+    INVTYPE_WAIST = "waist",
+    INVTYPE_LEGS = "legs",
+    INVTYPE_FEET = "feet",
+    INVTYPE_FINGER = "finger",
+    INVTYPE_TRINKET = "trinket",
+    INVTYPE_WEAPON = "one-hand",
+    INVTYPE_2HWEAPON = "two-hand",
+    INVTYPE_WEAPONMAINHAND = "main hand",
+    INVTYPE_WEAPONOFFHAND = "off hand",
+    INVTYPE_SHIELD = "shield",
+    INVTYPE_HOLDABLE = "held in off-hand",
+    INVTYPE_RANGED = "ranged",
+    INVTYPE_RANGEDRIGHT = "ranged",
+    INVTYPE_THROWN = "ranged",
+}
+
+-- Equip locations that share a key with another one, and so do not name it
+local EQUIP_SLOT_ALIASES = {
+    INVTYPE_ROBE = true,
+    INVTYPE_RANGEDRIGHT = true,
+    INVTYPE_THROWN = true,
+}
+
+local function EquipSlotValues()
+    local values = {}
+    for equipLoc, key in pairs(EQUIP_SLOT_KEYS) do
+        if not EQUIP_SLOT_ALIASES[equipLoc] then
+            values[key] = _G[equipLoc] or key
+        end
+    end
+    return values
+end
+
+local ZONE_TYPES = {
+    none = "Outside",
+    party = "Dungeon",
+    raid = "Raid",
+    scenario = "Scenario",
+    pvp = "Battleground",
+    arena = "Arena",
+}
+
+local function ZoneTypeValues()
+    return ZONE_TYPES
 end
 
 local function QualityValues()
@@ -105,12 +201,55 @@ ns.CONDITIONS = {
         default = 0,
     },
     quality = { label = "Quality", kind = "quality", op = ">=", default = 4, values = QualityValues },
-    itemClass = { label = "Item type", kind = "select", op = "==", default = 4, values = ItemClassValues },
+    itemClass = { label = "Item type", kind = "select", op = "oneOf", default = { [4] = true }, values = ItemClassValues },
+    itemSubclass = {
+        label = "Item subtype",
+        desc = "For example Armor: Cloth, Weapon: Staves or Recipe: Tailoring.",
+        kind = "select",
+        op = "oneOf",
+        default = { ["04:01"] = true },
+        values = ItemSubclassValues,
+    },
+    equipSlot = {
+        label = "Equip slot",
+        desc = "Never matches items that cannot be equipped.",
+        kind = "select",
+        op = "oneOf",
+        default = { trinket = true },
+        values = EquipSlotValues,
+    },
+    known = {
+        label = "Already known",
+        desc = "Yes for recipes, mounts, pets and other items your character has already learned.",
+        kind = "boolean",
+        default = true,
+    },
+    owned = {
+        label = "Already owned",
+        desc = "Yes if the same item is in your bags, in your bank or worn.",
+        kind = "boolean",
+        default = true,
+    },
+    zoneType = {
+        label = "Zone type",
+        desc = "Where you are when the loot drops.",
+        kind = "select",
+        op = "oneOf",
+        default = { raid = true },
+        values = ZoneTypeValues,
+    },
+    finderGroup = {
+        label = "In a finder group",
+        desc = "Yes in groups made by the Dungeon Finder, Raid Finder or Scenario queue.",
+        kind = "boolean",
+        default = true,
+    },
     name = { label = "Name", kind = "text", op = "contains", default = "" },
 }
 ns.CONDITION_ORDER = {
     "canNeed", "canGreed", "canDisenchant", "bindOnPickup", "equippable", "ownArmorType",
-    "itemLevel", "equippedDiff", "quality", "itemClass", "name",
+    "itemLevel", "equippedDiff", "quality", "itemClass", "itemSubclass", "equipSlot", "known", "owned",
+    "zoneType", "finderGroup", "name",
 }
 
 ns.DEFAULT_RULES = {
@@ -125,7 +264,7 @@ ns.DEFAULT_RULES = {
         enabled = true,
         action = "greed",
         conditions = {
-            { type = "itemClass", op = "==", value = 4 },
+            { type = "itemClass", op = "oneOf", value = { [4] = true } },
             { type = "ownArmorType", value = false },
         },
     },
@@ -134,7 +273,7 @@ ns.DEFAULT_RULES = {
         enabled = true,
         action = "greed",
         conditions = {
-            { type = "itemClass", op = "==", value = 2 },
+            { type = "itemClass", op = "oneOf", value = { [2] = true } },
             { type = "equippable", value = false },
         },
     },
@@ -151,7 +290,43 @@ function ns.ResetCondition(condition, conditionType)
     local def = ns.CONDITIONS[conditionType]
     condition.type = conditionType
     condition.op = def.op
-    condition.value = def.default
+    condition.value = type(def.default) == "table" and CopySet(def.default) or def.default
+end
+
+-- Change the operator, converting the value between a single value and a set when needed
+function ns.SetOperator(condition, op)
+    local wasSet = ns.OPERATORS[condition.op] and ns.OPERATORS[condition.op].isSet
+    local isSet = ns.OPERATORS[op].isSet
+    condition.op = op
+
+    if isSet and not wasSet then
+        condition.value = condition.value ~= nil and { [condition.value] = true } or {}
+    elseif wasSet and not isSet then
+        local lowest
+        for key in pairs(type(condition.value) == "table" and condition.value or {}) do
+            if not lowest or key < lowest then
+                lowest = key
+            end
+        end
+        condition.value = lowest or ns.CONDITIONS[condition.type].default
+    end
+end
+
+-- Bring rules saved by older versions up to date. Single-value "is" and "is not" conditions
+-- on list values became sets, so several values can be picked.
+function ns.MigrateRules(rules)
+    for _, rule in ipairs(rules) do
+        for _, condition in ipairs(rule.conditions or {}) do
+            local def = ns.CONDITIONS[condition.type]
+            if def and (def.kind == "select" or def.kind == "quality") and type(condition.value) ~= "table" then
+                if condition.op == "==" then
+                    condition.op, condition.value = "oneOf", { [condition.value] = true }
+                elseif condition.op == "~=" then
+                    condition.op, condition.value = "noneOf", { [condition.value] = true }
+                end
+            end
+        end
+    end
 end
 
 -- Inventory slots each equip location can go to
@@ -339,6 +514,54 @@ local function IsOwnArmorType(classID, subclassID, equipLoc)
     return subclassID == ns.GetOwnArmorType()
 end
 
+local function TooltipHasLine(link, text)
+    local tooltip = GetScanTooltip()
+    tooltip:SetHyperlink(link)
+    for lineIndex = 1, tooltip:NumLines() do
+        local line = _G[SCAN_TOOLTIP_NAME .. "TextLeft" .. lineIndex]
+        if line and line:GetText() == text then
+            return true
+        end
+    end
+    return false
+end
+
+-- Recipes and most learnable items say "Already known" in the tooltip. Pets and mounts are also asked from their journals.
+local function IsKnown(link, itemID)
+    if ITEM_SPELL_KNOWN and TooltipHasLine(link, ITEM_SPELL_KNOWN) then
+        return true
+    end
+
+    if itemID and C_PetJournal and C_PetJournal.GetPetInfoByItemID and C_PetJournal.GetNumCollectedInfo then
+        local speciesID = select(13, C_PetJournal.GetPetInfoByItemID(itemID))
+        if speciesID then
+            local collected = C_PetJournal.GetNumCollectedInfo(speciesID)
+            if collected and collected > 0 then
+                return true
+            end
+        end
+    end
+
+    if itemID and C_MountJournal and C_MountJournal.GetMountFromItem and C_MountJournal.GetMountInfoByID then
+        local mountID = C_MountJournal.GetMountFromItem(itemID)
+        if mountID then
+            local isCollected = select(11, C_MountJournal.GetMountInfoByID(mountID))
+            if isCollected then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+local function IsOwned(link)
+    if GetItemCount and (GetItemCount(link, true) or 0) > 0 then
+        return true
+    end
+    return IsEquippedItem ~= nil and IsEquippedItem(link) == true
+end
+
 -- Call back once the item data is in the client cache, so item level and name are known
 function ns.WhenItemLoaded(link, callback)
     if Item and Item.CreateFromItemLink then
@@ -354,7 +577,8 @@ end
 -- Collect the facts rules are tested against. roll holds what the loot roll reports.
 function ns.DescribeItem(link, roll)
     local name, _, quality, _, _, _, _, _, _, _, _, _, _, bindType = GetItemInfo(link)
-    local _, _, _, equipLoc, _, classID, subclassID = GetItemInfoInstant(link)
+    local itemID, _, _, equipLoc, _, classID, subclassID = GetItemInfoInstant(link)
+    local _, zoneType = GetInstanceInfo()
     local itemLevel = GetDetailedItemLevelInfo(link)
     local equippedLevel, equippedLink = ns.GetEquippedItemLevel(equipLoc)
 
@@ -367,6 +591,12 @@ function ns.DescribeItem(link, roll)
         canGreed = roll.canGreed,
         canDisenchant = roll.canDisenchant,
         itemClass = classID,
+        itemSubclass = classID and subclassID and SubclassKey(classID, subclassID) or nil,
+        equipSlot = EQUIP_SLOT_KEYS[equipLoc],
+        known = IsKnown(link, itemID),
+        owned = IsOwned(link),
+        zoneType = zoneType or "none",
+        finderGroup = LE_PARTY_CATEGORY_INSTANCE ~= nil and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) == true,
         equippable = EQUIP_SLOTS[equipLoc] ~= nil and not ns.HasRedText(link),
         ownArmorType = IsOwnArmorType(classID, subclassID, equipLoc),
         itemLevel = itemLevel,
@@ -395,6 +625,9 @@ function ns.ConditionMatches(condition, item)
 
     local operator = ns.OPERATORS[condition.op]
     if not operator or condition.value == nil then
+        return false
+    end
+    if operator.isSet and type(condition.value) ~= "table" then
         return false
     end
     return operator.test(actual, condition.value)
@@ -428,16 +661,27 @@ local function YesNo(value)
     return value and "yes" or "no"
 end
 
--- One line with the facts the rules saw, for finding out why a rule did or did not match
+local function ValueLabel(conditionType, value)
+    if value == nil then
+        return "none"
+    end
+    return ns.CONDITIONS[conditionType].values()[value] or tostring(value)
+end
+
+-- Two lines with the facts the rules saw, for finding out why a rule did or did not match
 function ns.DescribeFacts(item)
     local equipped = "not equippable"
     if item.equippedLevel then
         equipped = string.format("equipped %s %d (%+d)",
             item.equippedLink or "nothing", item.equippedLevel, item.equippedDiff or 0)
     end
-    return string.format("Need %s, Greed %s, Disenchant %s, you can equip %s, your armor type %s, item level %s, %s, binds on pickup %s",
+    local rolls = string.format("Need %s, Greed %s, Disenchant %s, you can equip %s, your armor type %s, item level %s, %s, binds on pickup %s",
         YesNo(item.canNeed), YesNo(item.canGreed), YesNo(item.canDisenchant), YesNo(item.equippable), YesNo(item.ownArmorType),
         tostring(item.itemLevel or "?"), equipped, YesNo(item.bindOnPickup))
+    local details = string.format("slot %s, subtype %s, zone %s, finder group %s, already known %s, already owned %s",
+        ValueLabel("equipSlot", item.equipSlot), ValueLabel("itemSubclass", item.itemSubclass),
+        ValueLabel("zoneType", item.zoneType), YesNo(item.finderGroup), YesNo(item.known), YesNo(item.owned))
+    return rolls, details
 end
 
 -- Why a rule does not decide the roll for this item, or nil if it does
@@ -468,8 +712,18 @@ end
 local function FormatValue(condition, def)
     if def.kind == "text" then
         return '"' .. tostring(condition.value) .. '"'
+    elseif type(condition.value) == "table" then
+        local labels = {}
+        for key in pairs(condition.value) do
+            table.insert(labels, ValueLabel(condition.type, key))
+        end
+        if #labels == 0 then
+            return "(nothing picked)"
+        end
+        table.sort(labels)
+        return table.concat(labels, " or ")
     elseif def.values then
-        return def.values()[condition.value] or tostring(condition.value)
+        return ValueLabel(condition.type, condition.value)
     end
     return tostring(condition.value)
 end

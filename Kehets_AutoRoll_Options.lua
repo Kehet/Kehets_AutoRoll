@@ -48,7 +48,21 @@ end
 local function BuildValueOption(condition, def)
     local option = { name = "Value", order = 3, width = 0.9 }
 
-    if def.kind == "boolean" then
+    local operator = ns.OPERATORS[condition.op]
+    if operator and operator.isSet then
+        -- Several values can be picked; the condition matches any of them
+        if type(condition.value) ~= "table" then
+            condition.value = {}
+        end
+        option.type = "multiselect"
+        option.dialogControl = "Dropdown"
+        option.values = def.values
+        option.get = function(_, key) return condition.value[key] == true end
+        option.set = function(_, key, state)
+            condition.value[key] = state or nil
+            AutoRoll:RefreshOptions()
+        end
+    elseif def.kind == "boolean" then
         option.type = "select"
         option.values = BOOLEAN_VALUES
         option.sorting = BOOLEAN_SORTING
@@ -126,7 +140,7 @@ local function BuildConditionGroup(rule, conditionIndex)
                 hidden = def.kind == "boolean",
                 get = function() return condition.op end,
                 set = function(_, value)
-                    condition.op = value
+                    ns.SetOperator(condition, value)
                     AutoRoll:RefreshOptions()
                 end,
             },

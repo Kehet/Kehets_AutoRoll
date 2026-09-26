@@ -24,9 +24,17 @@ A rule without conditions matches every item. Put it last to catch everything th
 | Your armor type | Yes or No. Yes for cloth, leather, mail or plate gear of the heaviest armor type your character has learned, for example mail for a shaman. Never matches rings, necks, trinkets, cloaks, shields and off-hands. |
 | Item level | A number |
 | Item level vs equipped | The item level minus the item level you wear in that slot |
-| Quality | Poor to Heirloom |
+| Quality | Poor to Heirloom. Compare with at least, at most and so on, or pick several qualities. |
 | Item type | Armor, Weapon, Consumable, Gem, Trade Goods, Recipe, Quest, Miscellaneous, Glyph or Battle Pet |
+| Item subtype | For example Armor: Cloth, Weapon: Staves or Recipe: Tailoring |
+| Equip slot | Head, Trinket, Two-Hand and the other slots. Never matches items that cannot be equipped. |
+| Already known | Yes or No. Yes for recipes, mounts, pets and other items your character has already learned. |
+| Already owned | Yes or No. Yes if the same item is in your bags, in your bank or worn. |
+| Zone type | Outside, Dungeon, Raid, Scenario, Battleground or Arena. Where you are when the loot drops. |
+| In a finder group | Yes or No. Yes in groups made by the Dungeon Finder, Raid Finder or Scenario queue. |
 | Name | Text the name contains or does not contain |
+
+For Quality, Item type, Item subtype, Equip slot and Zone type, "is" and "is not" take several values. The condition "Equip slot is Finger or Trinket" matches rings and trinkets.
 
 For Item level vs equipped, a value below 0 means the item is worse than what you wear. For rings, trinkets and one-handed weapons, the weaker of the two slots is used. An empty slot counts as item level 0. The condition never matches items that you cannot equip.
 
