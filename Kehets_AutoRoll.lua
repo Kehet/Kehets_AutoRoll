@@ -10,11 +10,12 @@ local defaultSavedVariables = {
         enabled = true,
         announce = true,
         autoConfirm = true,
+        autoConfirmDisenchant = true,
         dryRun = false,
     },
 }
 
--- Rolls this addon made, so only those bind-on-pickup confirmations are accepted automatically
+-- Rolls this addon made, so only their bind-on-pickup and disenchant confirmations are accepted automatically
 local pendingRolls = {}
 
 function AutoRoll:OnInitialize()
@@ -97,9 +98,18 @@ function AutoRoll:ExplainRules(item)
     end
 end
 
--- Rolling on a bind-on-pickup item asks for confirmation
+-- Rolls that need confirmation, such as on bind-on-pickup items, ask here. Mists of Pandaria Classic
+-- has no separate disenchant event, so a Disenchant roll is told apart by its roll type.
 function AutoRoll:CONFIRM_LOOT_ROLL(event, rollID, rollType)
-    if not pendingRolls[rollID] or not self.db.profile.autoConfirm then
+    if not pendingRolls[rollID] then
+        return
+    end
+
+    local confirm = self.db.profile.autoConfirm
+    if rollType == ns.ACTIONS.disenchant.rollType then
+        confirm = self.db.profile.autoConfirmDisenchant
+    end
+    if not confirm then
         return
     end
 

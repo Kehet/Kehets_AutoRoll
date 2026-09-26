@@ -49,6 +49,7 @@ Open the settings with `/autoroll`, or open Options > AddOns > Kehet's AutoRoll.
 | Roll automatically | On | Roll on group loot with your rules |
 | Print rolls to chat | On | Print each automatic roll and the rule that made it |
 | Confirm bind-on-pickup rolls | On | Accept the bind question for rolls that the addon makes. Rolls you make yourself still ask. |
+| Confirm disenchant rolls | On | Accept the disenchant question for rolls that the addon makes. Rolls you make yourself still ask. |
 | Dry run | Off | Check the rules and print what would be rolled, but do not roll. Chat messages are always on in dry run. |
 
 Settings and rules are saved in profiles. By default all characters share the Default profile. Use the Profiles tab to give a character its own rules.

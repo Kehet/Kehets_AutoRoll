@@ -364,6 +364,16 @@ local function CreateOptionsTable()
                         get = function() return profile.autoConfirm end,
                         set = function(_, value) profile.autoConfirm = value end,
                     },
+                    autoConfirmDisenchant = {
+                        type = "toggle",
+                        name = "Confirm disenchant rolls",
+                        desc = "Accept the \"the item will be disenchanted if you win\" question for rolls this addon makes."
+                            .. " Rolls you make yourself still ask.",
+                        order = 3.5,
+                        width = "full",
+                        get = function() return profile.autoConfirmDisenchant end,
+                        set = function(_, value) profile.autoConfirmDisenchant = value end,
+                    },
                     dryRun = {
                         type = "toggle",
                         name = "Dry run",
