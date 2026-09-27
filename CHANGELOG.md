@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.1.0...1.2.0) (2026-09-27)
+
+
+### Features
+
+* list slash commands in the enabled message ([#4](https://github.com/Kehet/Kehets_AutoRoll/issues/4)) ([f357556](https://github.com/Kehet/Kehets_AutoRoll/commit/f357556e390befe1029b137355703e14e2b3bc00))
+
 ## [1.1.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.0.0...1.1.0) (2026-09-27)
 
 
