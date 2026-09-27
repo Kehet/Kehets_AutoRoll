@@ -6,7 +6,9 @@
 ## OptionalDeps: Ace3
 ## SavedVariables: KehetsAutoRollDB
 
-embeds.xml
+#@non-debug@
+# embeds.xml
+#@end-non-debug@
 Kehets_AutoRoll_Rules.lua
 Kehets_AutoRoll.lua
 Kehets_AutoRoll_Options.lua
