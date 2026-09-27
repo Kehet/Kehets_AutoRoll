@@ -12,6 +12,7 @@ local defaultSavedVariables = {
         autoConfirm = true,
         autoConfirmDisenchant = true,
         dryRun = false,
+        debug = false,
     },
 }
 
@@ -79,7 +80,9 @@ function AutoRoll:HandleRoll(rollID, item)
     local rule, index = ns.Evaluate(self.db.profile.rules, item)
     if not rule then
         self:Announce("No rule matched " .. item.link .. ", roll manually")
-        self:ExplainRules(item)
+        if self.db.profile.debug then
+            self:ExplainRules(item)
+        end
         return
     end
 
@@ -92,12 +95,13 @@ function AutoRoll:HandleRoll(rollID, item)
     end
 end
 
+-- Why each rule did not match, printed as debug output after "No rule matched"
 function AutoRoll:ExplainRules(item)
     local rolls, details = ns.DescribeFacts(item)
-    self:Announce("  " .. rolls)
-    self:Announce("  " .. details)
+    self:Debug(item.link .. ": " .. rolls)
+    self:Debug("  " .. details)
     for index, rule in ipairs(self.db.profile.rules) do
-        self:Announce(string.format("  %d. %s: %s", index, rule.name, ns.ExplainRule(rule, item) or "matches"))
+        self:Debug(string.format("  %d. %s: %s", index, rule.name, ns.ExplainRule(rule, item) or "matches"))
     end
 end
 
@@ -131,6 +135,11 @@ function AutoRoll:Announce(message)
     elseif self.db.profile.announce then
         self:Print(message)
     end
+end
+
+-- Debug output prints whenever debug is on, also when Print rolls to chat is off
+function AutoRoll:Debug(message)
+    self:Print("|cFF66B2FF[Debug]|r " .. message)
 end
 
 -- Show which rule would handle an item, assuming every roll type is available
@@ -186,6 +195,10 @@ function AutoRoll:HandleSlashCommand(input)
         self.db.profile.dryRun = not self.db.profile.dryRun
         self:RefreshOptions()
         self:Print(self.db.profile.dryRun and "Dry run on: rolls are printed but not made." or "Dry run off.")
+    elseif command == "debug" then
+        self.db.profile.debug = not self.db.profile.debug
+        self:RefreshOptions()
+        self:Print(self.db.profile.debug and "Debug output on: unmatched rolls show why each rule did not match." or "Debug output off.")
     elseif command == "rules" then
         self:PrintRules()
     elseif command == "test" then
@@ -195,6 +208,7 @@ function AutoRoll:HandleSlashCommand(input)
         self:Print(" '/autoroll' to open the settings")
         self:Print(" '/autoroll on' or '/autoroll off' to turn automatic rolling on or off")
         self:Print(" '/autoroll dry' to turn dry run on or off")
+        self:Print(" '/autoroll debug' to turn debug output on or off")
         self:Print(" '/autoroll rules' to list the rules in chat")
         self:Print(" '/autoroll test <item link>' to see which rule an item would match")
     end

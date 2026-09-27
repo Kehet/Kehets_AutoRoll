@@ -397,6 +397,16 @@ local function CreateOptionsTable()
                         get = function() return profile.dryRun end,
                         set = function(_, value) profile.dryRun = value end,
                     },
+                    debug = {
+                        type = "toggle",
+                        name = "Debug output",
+                        desc = "When no rule matches an item, print the item details and why each rule did not match."
+                            .. " Same as /autoroll debug.",
+                        order = 5,
+                        width = "full",
+                        get = function() return profile.debug end,
+                        set = function(_, value) profile.debug = value end,
+                    },
                 },
             },
             rules = BuildRulesGroup(),
