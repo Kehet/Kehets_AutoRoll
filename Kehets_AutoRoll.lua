@@ -33,7 +33,7 @@ function AutoRoll:OnInitialize()
 end
 
 function AutoRoll:OnEnable()
-    self:Print("Enabled")
+    self:Print("Enabled - Use /autoroll or /kar to open the settings, /autoroll on or /autoroll off to turn automatic rolling on or off")
     self:RegisterEvent("START_LOOT_ROLL")
     self:RegisterEvent("CONFIRM_LOOT_ROLL")
     self:RegisterEvent("CANCEL_LOOT_ROLL")
