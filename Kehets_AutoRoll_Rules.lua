@@ -451,10 +451,10 @@ end
 -- The game colors requirements the character does not meet red in the tooltip:
 -- armor or weapon type, class, level, profession. That is the most reliable "can I use this" check.
 function ns.HasRedText(link)
-    local scanTooltip = GetScanTooltip()
-    scanTooltip:SetHyperlink(link)
+    local tooltip = GetScanTooltip()
+    tooltip:SetHyperlink(link)
 
-    for lineIndex = 1, scanTooltip:NumLines() do
+    for lineIndex = 1, tooltip:NumLines() do
         for _, side in ipairs({ "Left", "Right" }) do
             local line = _G[SCAN_TOOLTIP_NAME .. "Text" .. side .. lineIndex]
             if line and line:IsShown() and line:GetText() then
