@@ -84,4 +84,4 @@ Use `/autoroll` or `/kar`.
 
 ## License
 
-MIT. See `LICENSE`.
+Public domain (The Unlicense). See `LICENSE`.
