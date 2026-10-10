@@ -48,6 +48,7 @@ read_globals = {
     "Item",
     "ITEM_LEVEL",
     "ItemLocation",
+    "ITEM_MIN_LEVEL",
     "ITEM_QUALITY_COLORS",
     "ITEM_SPELL_KNOWN",
     "LE_PARTY_CATEGORY_INSTANCE",
