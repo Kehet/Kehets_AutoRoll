@@ -185,8 +185,9 @@ ns.CONDITIONS = {
     },
     equippable = {
         label = "You can equip",
-        desc = "Gear that your character can wear now. Gear with red text in its tooltip, such as the wrong armor type,"
-            .. " weapon type, class or level, counts as No. Items that are not gear, and bags, also count as No.",
+        desc = "Gear that your character can wear. Gear with red text in its tooltip, such as the wrong armor type,"
+            .. " weapon type or class, counts as No. A level requirement above your level does not count."
+            .. " Items that are not gear, and bags, also count as No.",
         kind = "boolean",
         default = true,
     },
@@ -450,14 +451,17 @@ end
 
 -- The game colors requirements the character does not meet red in the tooltip:
 -- armor or weapon type, class, level, profession. That is the most reliable "can I use this" check.
+-- The "Requires Level N" line is skipped, because the character grows into that requirement.
 function ns.HasRedText(link)
+    local levelPattern = ITEM_MIN_LEVEL and "^" .. ITEM_MIN_LEVEL:gsub("%%d", "%%d+") .. "$"
     local tooltip = GetScanTooltip()
     tooltip:SetHyperlink(link)
 
     for lineIndex = 1, tooltip:NumLines() do
         for _, side in ipairs({ "Left", "Right" }) do
             local line = _G[SCAN_TOOLTIP_NAME .. "Text" .. side .. lineIndex]
-            if line and line:IsShown() and line:GetText() then
+            local text = line and line:IsShown() and line:GetText()
+            if text and not (levelPattern and text:match(levelPattern)) then
                 local r, g, b = line:GetTextColor()
                 if r > 0.99 and g < 0.2 and b < 0.2 then
                     return true

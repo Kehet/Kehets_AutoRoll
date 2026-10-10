@@ -20,7 +20,7 @@ A rule without conditions matches every item. Put it last to catch everything th
 | Can roll Greed | Yes or No |
 | Can roll Disenchant | Yes or No |
 | Binds when picked up | Yes or No |
-| You can equip | Yes or No. Yes for gear your character can wear now. Gear with red text in its tooltip, such as the wrong armor type, weapon type, class or level, is No. Items that are not gear, and bags, are also No. |
+| You can equip | Yes or No. Yes for gear your character can wear. Gear with red text in its tooltip, such as the wrong armor type, weapon type or class, is No. A level requirement above your level does not make it No. Items that are not gear, and bags, are also No. |
 | Your armor type | Yes or No. Yes for cloth, leather, mail or plate gear of the heaviest armor type your character has learned, for example mail for a shaman. Never matches rings, necks, trinkets, cloaks, shields and off-hands. |
 | Item level | A number |
 | Item level vs equipped | The item level minus the item level you wear in that slot |
