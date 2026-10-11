@@ -55,11 +55,24 @@ Open the settings with `/autoroll`, or open Options > AddOns > Kehet's AutoRoll.
 | Setting | Default | Effect |
 |---|---|---|
 | Roll automatically | On | Roll on group loot with your rules |
-| Print rolls to chat | On | Print each automatic roll and the rule that made it |
 | Confirm bind-on-pickup rolls | On | Accept the bind question for rolls that the addon makes. Rolls you make yourself still ask. |
 | Confirm disenchant rolls | On | Accept the disenchant question for rolls that the addon makes. Rolls you make yourself still ask. |
-| Dry run | Off | Check the rules and print what would be rolled, but do not roll. Chat messages are always on in dry run. |
-| Debug output | Off | When no rule matches an item, print the item details and why each rule did not match. The lines start with `[Debug]` and print also when Print rolls to chat is off. |
+| Dry run | Off | Check the rules and print what would be rolled, but do not roll. Roll messages are always on in dry run. |
+
+The Messages tab has the messages that the addon shows by itself:
+
+| Message | Default | Content |
+|---|---|---|
+| Login message | On | The line that says the addon is enabled |
+| Rolls | On | Each automatic roll and the rule that made it |
+| Debug output | Off | When no rule matches an item, the item details and why each rule did not match. The lines start with `[Debug]`. |
+
+For each message you can set:
+
+- Show: turn the message on or off.
+- Show in: one or more of the chat windows, the error frame, the raid warning frame, the boss emote frame and the floating combat text.
+
+Mute all messages turns all of them off. Answers to slash commands always print.
 
 Settings and rules are saved in profiles. By default all characters share the Default profile. Use the Profiles tab to give a character its own rules.
 
@@ -73,7 +86,6 @@ Use `/autoroll` or `/kar`.
 | `/autoroll on` | Turn automatic rolling on |
 | `/autoroll off` | Turn automatic rolling off |
 | `/autoroll dry` | Turn dry run on or off |
-| `/autoroll debug` | Turn debug output on or off |
 | `/autoroll rules` | List the rules in chat |
 | `/autoroll test <item link>` | Show which rule an item matches. Shift-click an item to insert the link. The test assumes that Need, Greed and Disenchant are all available. |
 

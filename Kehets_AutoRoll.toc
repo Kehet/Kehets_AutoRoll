@@ -3,7 +3,7 @@
 ## Notes: Roll on group loot automatically with rules you edit
 ## Author: Kehet
 ## Version: @project-version@
-## OptionalDeps: Ace3
+## OptionalDeps: Ace3, LibKehetsVerbosity-1.0
 ## SavedVariables: KehetsAutoRollDB
 
 #@non-debug@
