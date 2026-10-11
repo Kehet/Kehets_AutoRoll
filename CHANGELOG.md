@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.2.1...1.3.0) (2026-10-11)
+
+
+### Features
+
+* add a Messages tab to choose where each message shows ([#13](https://github.com/Kehet/Kehets_AutoRoll/issues/13)) ([3a76a0e](https://github.com/Kehet/Kehets_AutoRoll/commit/3a76a0efe4bf28f2d8f7272ecfc4cffd6ee4f795))
+
 ## [1.2.1](https://github.com/Kehet/Kehets_AutoRoll/compare/1.2.0...1.2.1) (2026-10-10)
 
 
