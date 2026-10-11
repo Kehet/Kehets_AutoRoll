@@ -1,4 +1,4 @@
--- Settings window: general toggles, the rule editor and AceDB profiles
+-- Settings window: general toggles, message settings, the rule editor and AceDB profiles
 local _, ns = ...
 local AutoRoll = ns.AutoRoll
 
@@ -340,6 +340,9 @@ end
 local function CreateOptionsTable()
     local profile = AutoRoll.db.profile
 
+    local messages = AutoRoll:GetMessageOptions()
+    messages.order = 1.5
+
     return {
         type = "group",
         name = DISPLAY_NAME,
@@ -358,15 +361,6 @@ local function CreateOptionsTable()
                         width = "full",
                         get = function() return profile.enabled end,
                         set = function(_, value) profile.enabled = value end,
-                    },
-                    announce = {
-                        type = "toggle",
-                        name = "Print rolls to chat",
-                        desc = "Print each automatic roll and the rule that made it.",
-                        order = 2,
-                        width = "full",
-                        get = function() return profile.announce end,
-                        set = function(_, value) profile.announce = value end,
                     },
                     autoConfirm = {
                         type = "toggle",
@@ -397,18 +391,9 @@ local function CreateOptionsTable()
                         get = function() return profile.dryRun end,
                         set = function(_, value) profile.dryRun = value end,
                     },
-                    debug = {
-                        type = "toggle",
-                        name = "Debug output",
-                        desc = "When no rule matches an item, print the item details and why each rule did not match."
-                            .. " Same as /autoroll debug.",
-                        order = 5,
-                        width = "full",
-                        get = function() return profile.debug end,
-                        set = function(_, value) profile.debug = value end,
-                    },
                 },
             },
+            messages = messages,
             rules = BuildRulesGroup(),
             profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(AutoRoll.db),
         },

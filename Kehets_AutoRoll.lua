@@ -1,18 +1,37 @@
 local _, ns = ...
 
-local AutoRoll = LibStub("AceAddon-3.0"):NewAddon("Kehet's AutoRoll", "AceConsole-3.0", "AceEvent-3.0")
+local AutoRoll = LibStub("AceAddon-3.0"):NewAddon("Kehet's AutoRoll", "AceConsole-3.0", "AceEvent-3.0", "LibKehetsVerbosity-1.0")
 ns.AutoRoll = AutoRoll
+
+-- Messages the player can turn off or move on the Messages tab. Answers to slash commands always print.
+AutoRoll:RegisterMessageTypes({
+    banner = {
+        name = "Login message",
+        desc = "The line that says the addon is enabled.",
+        order = 1,
+    },
+    roll = {
+        name = "Rolls",
+        desc = "Each automatic roll and the rule that made it. Dry run always shows them.",
+        order = 2,
+    },
+    debug = {
+        name = "Debug output",
+        desc = "When no rule matches an item, the item details and why each rule did not match.",
+        order = 3,
+        shown = false,
+        tag = "|cFF66B2FF[Debug]|r",
+    },
+})
 
 -- Rules are not part of the AceDB defaults: AceDB merges default tables back in on every load,
 -- which would bring back rules the user deleted. They are seeded by EnsureRules instead.
 local defaultSavedVariables = {
     profile = {
         enabled = true,
-        announce = true,
         autoConfirm = true,
         autoConfirmDisenchant = true,
         dryRun = false,
-        debug = false,
     },
 }
 
@@ -25,6 +44,7 @@ function AutoRoll:OnInitialize()
     self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileUpdated")
     self.db.RegisterCallback(self, "OnProfileReset", "OnProfileUpdated")
     self:EnsureRules()
+    self:MigrateMessageSettings()
 
     self:SetupOptions()
 
@@ -33,7 +53,7 @@ function AutoRoll:OnInitialize()
 end
 
 function AutoRoll:OnEnable()
-    self:Print("Enabled - Use /autoroll or /kar to open the settings, /autoroll on or /autoroll off to turn automatic rolling on or off")
+    self:Notify("banner", "Enabled - Use /autoroll or /kar to open the settings, /autoroll on or /autoroll off to turn automatic rolling on or off")
     self:RegisterEvent("START_LOOT_ROLL")
     self:RegisterEvent("CONFIRM_LOOT_ROLL")
     self:RegisterEvent("CANCEL_LOOT_ROLL")
@@ -46,8 +66,22 @@ function AutoRoll:EnsureRules()
     ns.MigrateRules(self.db.profile.rules)
 end
 
+-- Print rolls to chat and Debug output were settings of their own before the Messages tab
+function AutoRoll:MigrateMessageSettings()
+    local profile = self.db.profile
+    if profile.announce ~= nil then
+        self:SetMessageShown("roll", profile.announce)
+        profile.announce = nil
+    end
+    if profile.debug ~= nil then
+        self:SetMessageShown("debug", profile.debug)
+        profile.debug = nil
+    end
+end
+
 function AutoRoll:OnProfileUpdated()
     self:EnsureRules()
+    self:MigrateMessageSettings()
     self:RefreshOptions()
 end
 
@@ -80,7 +114,7 @@ function AutoRoll:HandleRoll(rollID, item)
     local rule, index = ns.Evaluate(self.db.profile.rules, item)
     if not rule then
         self:Announce("No rule matched " .. item.link .. ", roll manually")
-        if self.db.profile.debug then
+        if self:IsMessageShown("debug") then
             self:ExplainRules(item)
         end
         return
@@ -128,18 +162,17 @@ function AutoRoll:CANCEL_LOOT_ROLL(event, rollID)
     pendingRolls[rollID] = nil
 end
 
--- Dry run always prints, since chat is the only place it shows what it would have done
+-- Dry run always shows the roll, since the message is the only place it shows what it would have done
 function AutoRoll:Announce(message)
     if self.db.profile.dryRun then
-        self:Print("|cFF9D9D9D[Dry run]|r " .. message)
-    elseif self.db.profile.announce then
-        self:Print(message)
+        self:Notify("roll", "|cFF9D9D9D[Dry run]|r " .. message, { force = true })
+    else
+        self:Notify("roll", message)
     end
 end
 
--- Debug output prints whenever debug is on, also when Print rolls to chat is off
 function AutoRoll:Debug(message)
-    self:Print("|cFF66B2FF[Debug]|r " .. message)
+    self:Notify("debug", message)
 end
 
 -- Show which rule would handle an item, assuming every roll type is available
@@ -195,10 +228,6 @@ function AutoRoll:HandleSlashCommand(input)
         self.db.profile.dryRun = not self.db.profile.dryRun
         self:RefreshOptions()
         self:Print(self.db.profile.dryRun and "Dry run on: rolls are printed but not made." or "Dry run off.")
-    elseif command == "debug" then
-        self.db.profile.debug = not self.db.profile.debug
-        self:RefreshOptions()
-        self:Print(self.db.profile.debug and "Debug output on: unmatched rolls show why each rule did not match." or "Debug output off.")
     elseif command == "rules" then
         self:PrintRules()
     elseif command == "test" then
@@ -208,7 +237,6 @@ function AutoRoll:HandleSlashCommand(input)
         self:Print(" '/autoroll' to open the settings")
         self:Print(" '/autoroll on' or '/autoroll off' to turn automatic rolling on or off")
         self:Print(" '/autoroll dry' to turn dry run on or off")
-        self:Print(" '/autoroll debug' to turn debug output on or off")
         self:Print(" '/autoroll rules' to list the rules in chat")
         self:Print(" '/autoroll test <item link>' to see which rule an item would match")
     end
