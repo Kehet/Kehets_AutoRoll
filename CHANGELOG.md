@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.4.1...1.5.0) (2026-10-17)
+
+
+### Features
+
+* add more quick rules and a Your profession condition ([#21](https://github.com/Kehet/Kehets_AutoRoll/issues/21)) ([f5b9f55](https://github.com/Kehet/Kehets_AutoRoll/commit/f5b9f55525118695e9409678f09faa4198e8afd4))
+* replace the default rules with quick rule buttons ([#19](https://github.com/Kehet/Kehets_AutoRoll/issues/19)) ([1faf906](https://github.com/Kehet/Kehets_AutoRoll/commit/1faf906d9ba24eb0e8c499d1ca076d71b4989baf))
+
 ## [1.4.1](https://github.com/Kehet/Kehets_AutoRoll/compare/1.4.0...1.4.1) (2026-10-17)
 
 
