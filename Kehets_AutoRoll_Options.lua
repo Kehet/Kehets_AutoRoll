@@ -285,6 +285,24 @@ local function BuildRuleGroup(rules, index)
     return group
 end
 
+local function FindRule(rules, name)
+    for _, rule in ipairs(rules) do
+        if rule.name == name then
+            return rule
+        end
+    end
+end
+
+-- A quick rule button is disabled once all of its rules are in the list, matched by name
+local function HasAllRules(rules, quickRules)
+    for _, rule in ipairs(quickRules) do
+        if not FindRule(rules, rule.name) then
+            return false
+        end
+    end
+    return true
+end
+
 local function BuildRulesGroup()
     local rules = AutoRoll.db.profile.rules
 
@@ -316,19 +334,46 @@ local function BuildRulesGroup()
                     SelectRule(#rules)
                 end,
             },
-            resetRules = {
-                type = "execute",
-                name = "Restore default rules",
-                order = 3,
-                confirm = true,
-                confirmText = "Replace all rules with the default rules?",
-                func = function()
-                    AutoRoll.db.profile.rules = CopyTable(ns.DEFAULT_RULES)
-                    AutoRoll:RefreshOptions()
-                end,
+            quickHeader = {
+                type = "header",
+                name = "Quick rules",
+                order = 4,
+            },
+            quickHelp = {
+                type = "description",
+                name = "Add a ready-made rule to the end of the list. You can edit, reorder and delete it like any other rule.\n",
+                order = 5,
             },
         },
     }
+
+    if #rules == 0 then
+        group.args.noRules = {
+            type = "description",
+            name = "No rules yet. Until you add one, the addon does not roll and you roll yourself.\n",
+            fontSize = "medium",
+            order = 1.5,
+        }
+    end
+
+    for quickIndex, quick in ipairs(ns.QUICK_RULES) do
+        group.args["quick" .. quickIndex] = {
+            type = "execute",
+            name = quick.label,
+            desc = quick.desc,
+            order = 5 + quickIndex,
+            width = 1.2,
+            disabled = HasAllRules(rules, quick.rules),
+            func = function()
+                for _, rule in ipairs(quick.rules) do
+                    if not FindRule(rules, rule.name) then
+                        table.insert(rules, CopyTable(rule))
+                    end
+                end
+                AutoRoll:RefreshOptions()
+            end,
+        }
+    end
 
     for index = 1, #rules do
         group.args["rule" .. index] = BuildRuleGroup(rules, index)
