@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.3.0...1.4.0) (2026-10-17)
+
+
+### Features
+
+* support Classic Era (interface 11509) ([#15](https://github.com/Kehet/Kehets_AutoRoll/issues/15)) ([fa79685](https://github.com/Kehet/Kehets_AutoRoll/commit/fa796859b64230f9964227a0a5d8e6789665e93f))
+
 ## [1.3.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.2.1...1.3.0) (2026-10-11)
 
 
