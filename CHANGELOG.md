@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/Kehet/Kehets_AutoRoll/compare/1.4.0...1.4.1) (2026-10-17)
+
+
+### Build System
+
+* add the CurseForge project ID to the TOC ([#17](https://github.com/Kehet/Kehets_AutoRoll/issues/17)) ([95a6fd9](https://github.com/Kehet/Kehets_AutoRoll/commit/95a6fd991488fea8dfebb0ff88ca4bdd653b242b))
+
 ## [1.4.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.3.0...1.4.0) (2026-10-17)
 
 
