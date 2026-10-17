@@ -177,6 +177,13 @@ local function BuildRuleGroup(rules, index)
                 fontSize = "medium",
                 order = 1,
             },
+            position = {
+                type = "description",
+                name = index == 1 and "|cFFFFD100Checked first.|r No other rule comes before it.\n"
+                    or string.format("|cFFFFD100Checked as number %d of %d.|r If a rule above it matches, this rule is not checked.\n",
+                        index, #rules),
+                order = 1.5,
+            },
             enabled = {
                 type = "toggle",
                 name = "Enabled",
@@ -312,10 +319,17 @@ local function BuildRulesGroup()
         order = 2,
         childGroups = "tree",
         args = {
+            orderTitle = {
+                type = "description",
+                name = "|cFFFFD100Rules are checked in order, from top to bottom|r",
+                fontSize = "large",
+                order = 0.5,
+            },
             help = {
                 type = "description",
-                name = "When loot drops, the rules are checked from top to bottom. The first enabled rule whose conditions all match"
-                    .. " decides the roll. If no rule matches, you roll yourself.\n",
+                name = "When loot drops, rule 1 is checked first, then rule 2, and so on. The first enabled rule whose conditions"
+                    .. " all match decides the roll, and the rules below it are not checked. If no rule matches, you roll yourself."
+                    .. " Use Move up and Move down on a rule to change the order.\n",
                 fontSize = "medium",
                 order = 1,
             },
@@ -341,7 +355,8 @@ local function BuildRulesGroup()
             },
             quickHelp = {
                 type = "description",
-                name = "Add a ready-made rule to the end of the list. You can edit, reorder and delete it like any other rule.\n",
+                name = "Add a ready-made rule. Halt rules go to the top of the list, so they are checked first, and the others"
+                    .. " go to the end. You can edit, reorder and delete them like any other rule.\n",
                 order = 5,
             },
         },
@@ -365,9 +380,11 @@ local function BuildRulesGroup()
             width = 1.2,
             disabled = HasAllRules(rules, quick.rules),
             func = function()
+                local position = quick.top and 1 or #rules + 1
                 for _, rule in ipairs(quick.rules) do
                     if not FindRule(rules, rule.name) then
-                        table.insert(rules, CopyTable(rule))
+                        table.insert(rules, position, CopyTable(rule))
+                        position = position + 1
                     end
                 end
                 AutoRoll:RefreshOptions()

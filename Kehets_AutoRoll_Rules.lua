@@ -225,6 +225,13 @@ ns.CONDITIONS = {
         kind = "boolean",
         default = true,
     },
+    ownProfession = {
+        label = "Your profession",
+        desc = "Yes for recipes of a profession your character has learned, for example a tailoring pattern for a tailor."
+            .. " Never matches items that are not recipes.",
+        kind = "boolean",
+        default = true,
+    },
     owned = {
         label = "Already owned",
         desc = "Yes if the same item is in your bags, in your bank or worn.",
@@ -249,11 +256,12 @@ ns.CONDITIONS = {
 }
 ns.CONDITION_ORDER = {
     "canNeed", "canGreed", "canDisenchant", "bindOnPickup", "equippable", "ownArmorType",
-    "itemLevel", "equippedDiff", "quality", "itemClass", "itemSubclass", "equipSlot", "known", "owned",
+    "itemLevel", "equippedDiff", "quality", "itemClass", "itemSubclass", "equipSlot", "known", "ownProfession", "owned",
     "zoneType", "finderGroup", "name",
 }
 
 -- Ready-made rules the Rules tab adds with one click. New profiles start without rules.
+-- Rules with top = true go to the top of the list, so a halt is checked before any rule that rolls.
 ns.QUICK_RULES = {
     {
         label = "Cannot need",
@@ -293,14 +301,40 @@ ns.QUICK_RULES = {
         },
     },
     {
+        label = "Already known",
+        desc = "Greed on recipes, mounts, pets and other items your character has already learned.",
+        rules = {
+            {
+                name = "Already known",
+                enabled = true,
+                action = "greed",
+                conditions = { { type = "known", value = true } },
+            },
+        },
+    },
+    {
         label = "Halt if quest item",
-        desc = "Stop at quest items and leave the roll to you.",
+        desc = "Stop at quest items and leave the roll to you. Added to the top of the list.",
+        top = true,
         rules = {
             {
                 name = "Halt if quest item",
                 enabled = true,
                 action = "manual",
                 conditions = { { type = "itemClass", op = "oneOf", value = { [12] = true } } },
+            },
+        },
+    },
+    {
+        label = "Halt on epic or higher",
+        desc = "Stop at Epic, Legendary and better items and leave the roll to you. Added to the top of the list.",
+        top = true,
+        rules = {
+            {
+                name = "Halt on epic or higher",
+                enabled = true,
+                action = "manual",
+                conditions = { { type = "quality", op = ">=", value = 4 } },
             },
         },
     },
@@ -544,6 +578,61 @@ local function IsOwnArmorType(classID, subclassID, equipLoc)
     return subclassID == ns.GetOwnArmorType()
 end
 
+local RECIPE_CLASS = 9
+local RECIPE_BOOK_SUBCLASS = 0
+
+-- Names of the professions the character has learned, including secondary ones such as Cooking
+local function GetProfessionNames()
+    local names = {}
+
+    if GetProfessions and GetProfessionInfo then
+        local professions = { GetProfessions() }
+        for slot = 1, 6 do
+            local index = professions[slot]
+            local name = index and GetProfessionInfo(index)
+            if name then
+                names[name] = true
+            end
+        end
+        return names
+    end
+
+    -- Classic Era has no GetProfessions. Read the Skills list instead. A collapsed header hides its
+    -- skills from the list, so open it while reading and close it again afterwards.
+    local opened = {}
+    local index = 1
+    while index <= GetNumSkillLines() do
+        local name, isHeader, isExpanded = GetSkillLineInfo(index)
+        if isHeader and not isExpanded then
+            opened[name] = true
+            ExpandSkillHeader(index)
+        elseif name and not isHeader then
+            names[name] = true
+        end
+        index = index + 1
+    end
+    -- From the bottom up, so closing a header does not move the headers above it
+    for headerIndex = GetNumSkillLines(), 1, -1 do
+        local name, isHeader = GetSkillLineInfo(headerIndex)
+        if isHeader and opened[name] then
+            CollapseSkillHeader(headerIndex)
+        end
+    end
+    return names
+end
+
+-- The recipe subtype has the same name as its profession, for example Recipe: Tailoring and Tailoring
+local function IsOwnProfession(classID, subclassID)
+    if classID ~= RECIPE_CLASS or not subclassID or subclassID == RECIPE_BOOK_SUBCLASS then
+        return nil
+    end
+    local professionName = GetItemSubClassInfo(classID, subclassID)
+    if not professionName then
+        return nil
+    end
+    return GetProfessionNames()[professionName] == true
+end
+
 local function TooltipHasLine(link, text)
     local tooltip = GetScanTooltip()
     tooltip:SetHyperlink(link)
@@ -624,6 +713,7 @@ function ns.DescribeItem(link, roll)
         itemSubclass = classID and subclassID and SubclassKey(classID, subclassID) or nil,
         equipSlot = EQUIP_SLOT_KEYS[equipLoc],
         known = IsKnown(link, itemID),
+        ownProfession = IsOwnProfession(classID, subclassID),
         owned = IsOwned(link),
         zoneType = zoneType or "none",
         finderGroup = LE_PARTY_CATEGORY_INSTANCE ~= nil and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) == true,
@@ -708,9 +798,10 @@ function ns.DescribeFacts(item)
     local rolls = string.format("Need %s, Greed %s, Disenchant %s, you can equip %s, your armor type %s, item level %s, %s, binds on pickup %s",
         YesNo(item.canNeed), YesNo(item.canGreed), YesNo(item.canDisenchant), YesNo(item.equippable), YesNo(item.ownArmorType),
         tostring(item.itemLevel or "?"), equipped, YesNo(item.bindOnPickup))
-    local details = string.format("slot %s, subtype %s, zone %s, finder group %s, already known %s, already owned %s",
+    local details = string.format("slot %s, subtype %s, zone %s, finder group %s, already known %s, your profession %s, already owned %s",
         ValueLabel("equipSlot", item.equipSlot), ValueLabel("itemSubclass", item.itemSubclass),
-        ValueLabel("zoneType", item.zoneType), YesNo(item.finderGroup), YesNo(item.known), YesNo(item.owned))
+        ValueLabel("zoneType", item.zoneType), YesNo(item.finderGroup), YesNo(item.known), YesNo(item.ownProfession),
+        YesNo(item.owned))
     return rolls, details
 end
 

@@ -29,6 +29,7 @@ A rule without conditions matches every item. Put it last to catch everything th
 | Item subtype | For example Armor: Cloth, Weapon: Staves or Recipe: Tailoring |
 | Equip slot | Head, Trinket, Two-Hand and the other slots. Never matches items that cannot be equipped. |
 | Already known | Yes or No. Yes for recipes, mounts, pets and other items your character has already learned. |
+| Your profession | Yes or No. Yes for recipes of a profession your character has learned, for example a tailoring pattern for a tailor. Never matches items that are not recipes. |
 | Already owned | Yes or No. Yes if the same item is in your bags, in your bank or worn. |
 | Zone type | Outside, Dungeon, Raid, Scenario, Battleground or Arena. Where you are when the loot drops. |
 | In a finder group | Yes or No. Yes in groups made by the Dungeon Finder, Raid Finder or Scenario queue. |
@@ -40,13 +41,15 @@ For Item level vs equipped, a value below 0 means the item is worse than what yo
 
 ## Quick rules
 
-A new profile has no rules, so the addon does not roll until you add one. The Rules tab has buttons that add ready-made rules to the end of the list:
+A new profile has no rules, so the addon does not roll until you add one. The Rules tab has buttons that add ready-made rules. Halt rules go to the top of the list, so they are checked before any rule that rolls. The other rules go to the end.
 
 | Button | Adds |
 |---|---|
 | Cannot need | Cannot need: if Can roll Need is No, then Greed |
 | Not equippable armor or weapon | Not equippable armor: if Item type is Armor and Your armor type is No, then Greed<br>Not equippable weapon: if Item type is Weapon and You can equip is No, then Greed |
-| Halt if quest item | Halt if quest item: if Item type is Quest, then Roll manually |
+| Already known | Already known: if Already known is Yes, then Greed |
+| Halt if quest item | Halt if quest item: if Item type is Quest, then Roll manually. Goes to the top. |
+| Halt on epic or higher | Halt on epic or higher: if Quality is at least Epic, then Roll manually. Goes to the top. |
 
 A button is disabled when its rules are already in the list. You can edit, reorder, disable and delete these rules like any other rule.
 
