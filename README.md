@@ -29,6 +29,7 @@ A rule without conditions matches every item. Put it last to catch everything th
 | Item subtype | For example Armor: Cloth, Weapon: Staves or Recipe: Tailoring |
 | Equip slot | Head, Trinket, Two-Hand and the other slots. Never matches items that cannot be equipped. |
 | Already known | Yes or No. Yes for recipes, mounts, pets and other items your character has already learned. |
+| Your profession | Yes or No. Yes for recipes of a profession your character has learned, for example a tailoring pattern for a tailor. Never matches items that are not recipes. |
 | Already owned | Yes or No. Yes if the same item is in your bags, in your bank or worn. |
 | Zone type | Outside, Dungeon, Raid, Scenario, Battleground or Arena. Where you are when the loot drops. |
 | In a finder group | Yes or No. Yes in groups made by the Dungeon Finder, Raid Finder or Scenario queue. |
