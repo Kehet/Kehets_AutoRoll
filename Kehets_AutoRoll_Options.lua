@@ -341,7 +341,8 @@ local function BuildRulesGroup()
             },
             quickHelp = {
                 type = "description",
-                name = "Add a ready-made rule to the end of the list. You can edit, reorder and delete it like any other rule.\n",
+                name = "Add a ready-made rule. Halt rules go to the top of the list, so they are checked first, and the others"
+                    .. " go to the end. You can edit, reorder and delete them like any other rule.\n",
                 order = 5,
             },
         },
@@ -365,9 +366,11 @@ local function BuildRulesGroup()
             width = 1.2,
             disabled = HasAllRules(rules, quick.rules),
             func = function()
+                local position = quick.top and 1 or #rules + 1
                 for _, rule in ipairs(quick.rules) do
                     if not FindRule(rules, rule.name) then
-                        table.insert(rules, CopyTable(rule))
+                        table.insert(rules, position, CopyTable(rule))
+                        position = position + 1
                     end
                 end
                 AutoRoll:RefreshOptions()

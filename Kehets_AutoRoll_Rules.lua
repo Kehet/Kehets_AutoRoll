@@ -261,6 +261,7 @@ ns.CONDITION_ORDER = {
 }
 
 -- Ready-made rules the Rules tab adds with one click. New profiles start without rules.
+-- Rules with top = true go to the top of the list, so a halt is checked before any rule that rolls.
 ns.QUICK_RULES = {
     {
         label = "Cannot need",
@@ -300,14 +301,40 @@ ns.QUICK_RULES = {
         },
     },
     {
+        label = "Already known",
+        desc = "Greed on recipes, mounts, pets and other items your character has already learned.",
+        rules = {
+            {
+                name = "Already known",
+                enabled = true,
+                action = "greed",
+                conditions = { { type = "known", value = true } },
+            },
+        },
+    },
+    {
         label = "Halt if quest item",
-        desc = "Stop at quest items and leave the roll to you.",
+        desc = "Stop at quest items and leave the roll to you. Added to the top of the list.",
+        top = true,
         rules = {
             {
                 name = "Halt if quest item",
                 enabled = true,
                 action = "manual",
                 conditions = { { type = "itemClass", op = "oneOf", value = { [12] = true } } },
+            },
+        },
+    },
+    {
+        label = "Halt on epic or higher",
+        desc = "Stop at Epic, Legendary and better items and leave the roll to you. Added to the top of the list.",
+        top = true,
+        rules = {
+            {
+                name = "Halt on epic or higher",
+                enabled = true,
+                action = "manual",
+                conditions = { { type = "quality", op = ">=", value = 4 } },
             },
         },
     },
