@@ -253,29 +253,55 @@ ns.CONDITION_ORDER = {
     "zoneType", "finderGroup", "name",
 }
 
-ns.DEFAULT_RULES = {
+-- Ready-made rules the Rules tab adds with one click. New profiles start without rules.
+ns.QUICK_RULES = {
     {
-        name = "Cannot need",
-        enabled = true,
-        action = "greed",
-        conditions = { { type = "canNeed", value = false } },
-    },
-    {
-        name = "Not equippable armor",
-        enabled = true,
-        action = "greed",
-        conditions = {
-            { type = "itemClass", op = "oneOf", value = { [4] = true } },
-            { type = "ownArmorType", value = false },
+        label = "Cannot need",
+        desc = "Greed on items your class cannot roll Need on.",
+        rules = {
+            {
+                name = "Cannot need",
+                enabled = true,
+                action = "greed",
+                conditions = { { type = "canNeed", value = false } },
+            },
         },
     },
     {
-        name = "Not equippable weapon",
-        enabled = true,
-        action = "greed",
-        conditions = {
-            { type = "itemClass", op = "oneOf", value = { [2] = true } },
-            { type = "equippable", value = false },
+        label = "Not equippable armor or weapon",
+        desc = "Greed on armor that is not your armor type and on weapons you cannot equip."
+            .. " Adds two rules, because all conditions of a rule must match.",
+        rules = {
+            {
+                name = "Not equippable armor",
+                enabled = true,
+                action = "greed",
+                conditions = {
+                    { type = "itemClass", op = "oneOf", value = { [4] = true } },
+                    { type = "ownArmorType", value = false },
+                },
+            },
+            {
+                name = "Not equippable weapon",
+                enabled = true,
+                action = "greed",
+                conditions = {
+                    { type = "itemClass", op = "oneOf", value = { [2] = true } },
+                    { type = "equippable", value = false },
+                },
+            },
+        },
+    },
+    {
+        label = "Halt if quest item",
+        desc = "Stop at quest items and leave the roll to you.",
+        rules = {
+            {
+                name = "Halt if quest item",
+                enabled = true,
+                action = "manual",
+                conditions = { { type = "itemClass", op = "oneOf", value = { [12] = true } } },
+            },
         },
     },
 }

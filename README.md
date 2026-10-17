@@ -38,15 +38,17 @@ For Quality, Item type, Item subtype, Equip slot and Zone type, "is" and "is not
 
 For Item level vs equipped, a value below 0 means the item is worse than what you wear. For rings, trinkets and one-handed weapons, the weaker of the two slots is used. An empty slot counts as item level 0. The condition never matches items that you cannot equip.
 
-## Default rules
+## Quick rules
 
-| # | Name | Rule |
-|---|---|---|
-| 1 | Cannot need | If Can roll Need is No, then Greed |
-| 2 | Not equippable armor | If Item type is Armor and Your armor type is No, then Greed |
-| 3 | Not equippable weapon | If Item type is Weapon and You can equip is No, then Greed |
+A new profile has no rules, so the addon does not roll until you add one. The Rules tab has buttons that add ready-made rules to the end of the list:
 
-You can edit, reorder, disable and delete the rules. Restore default rules brings them back.
+| Button | Adds |
+|---|---|
+| Cannot need | Cannot need: if Can roll Need is No, then Greed |
+| Not equippable armor or weapon | Not equippable armor: if Item type is Armor and Your armor type is No, then Greed<br>Not equippable weapon: if Item type is Weapon and You can equip is No, then Greed |
+| Halt if quest item | Halt if quest item: if Item type is Quest, then Roll manually |
+
+A button is disabled when its rules are already in the list. You can edit, reorder, disable and delete these rules like any other rule.
 
 ## Settings
 

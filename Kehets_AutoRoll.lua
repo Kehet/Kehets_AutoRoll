@@ -25,7 +25,7 @@ AutoRoll:RegisterMessageTypes({
 })
 
 -- Rules are not part of the AceDB defaults: AceDB merges default tables back in on every load,
--- which would bring back rules the user deleted. They are seeded by EnsureRules instead.
+-- which would bring back rules the user deleted. EnsureRules gives a new profile an empty list instead.
 local defaultSavedVariables = {
     profile = {
         enabled = true,
@@ -61,7 +61,7 @@ end
 
 function AutoRoll:EnsureRules()
     if not self.db.profile.rules then
-        self.db.profile.rules = CopyTable(ns.DEFAULT_RULES)
+        self.db.profile.rules = {}
     end
     ns.MigrateRules(self.db.profile.rules)
 end
@@ -205,7 +205,7 @@ end
 function AutoRoll:PrintRules()
     local rules = self.db.profile.rules
     if #rules == 0 then
-        self:Print("No rules. Add them with /autoroll config.")
+        self:Print("No rules. Add them, or use the quick rules, on the Rules tab of /autoroll config.")
         return
     end
     for index, rule in ipairs(rules) do
