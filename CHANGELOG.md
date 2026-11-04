@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/Kehet/Kehets_AutoRoll/compare/1.5.0...1.5.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* upload releases to Wago ([#23](https://github.com/Kehet/Kehets_AutoRoll/issues/23)) ([1f1ff6b](https://github.com/Kehet/Kehets_AutoRoll/commit/1f1ff6b2bdc26107ed1b498716fa1a708f06b6a2))
+
 ## [1.5.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.4.1...1.5.0) (2026-10-17)
 
 
