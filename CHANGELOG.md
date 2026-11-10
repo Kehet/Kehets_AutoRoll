@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.5.1...1.6.0) (2026-11-10)
+
+
+### Features
+
+* load in World of Warcraft: Forever ([#26](https://github.com/Kehet/Kehets_AutoRoll/issues/26)) ([f2804e3](https://github.com/Kehet/Kehets_AutoRoll/commit/f2804e3d9a64487ee294ec0c9eb5904a2ce78335))
+
 ## [1.5.1](https://github.com/Kehet/Kehets_AutoRoll/compare/1.5.0...1.5.1) (2026-11-04)
 
 
