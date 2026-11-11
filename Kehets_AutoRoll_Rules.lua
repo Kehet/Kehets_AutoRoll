@@ -186,7 +186,8 @@ ns.CONDITIONS = {
     equippable = {
         label = "You can equip",
         desc = "Gear that your character can wear. Gear with red text in its tooltip, such as the wrong armor type,"
-            .. " weapon type or class, counts as No. A level requirement above your level does not count."
+            .. " weapon type or class, counts as No. A level requirement above your level does not count,"
+            .. " and neither does a weapon skill your class can learn but you have not learned yet."
             .. " Items that are not gear, and bags, also count as No.",
         kind = "boolean",
         default = true,
@@ -277,7 +278,7 @@ ns.QUICK_RULES = {
     },
     {
         label = "Not equippable armor or weapon",
-        desc = "Greed on armor that is not your armor type and on weapons you cannot equip."
+        desc = "Greed on armor that is not your armor type and on weapons your class cannot use."
             .. " Adds two rules, because all conditions of a rule must match.",
         rules = {
             {
@@ -512,16 +513,20 @@ end
 -- The game colors requirements the character does not meet red in the tooltip:
 -- armor or weapon type, class, level, profession. That is the most reliable "can I use this" check.
 -- The "Requires Level N" line is skipped, because the character grows into that requirement.
-function ns.HasRedText(link)
+-- With slotText, the right side of the line whose left side reads slotText is skipped too.
+-- That is the weapon type, for example "One-Hand" on the left and "Sword" on the right.
+function ns.HasRedText(link, slotText)
     local levelPattern = ITEM_MIN_LEVEL and "^" .. ITEM_MIN_LEVEL:gsub("%%d", "%%d+") .. "$"
     local tooltip = GetScanTooltip()
     tooltip:SetHyperlink(link)
 
     for lineIndex = 1, tooltip:NumLines() do
+        local left = _G[SCAN_TOOLTIP_NAME .. "TextLeft" .. lineIndex]
+        local skipRight = slotText ~= nil and left ~= nil and left:GetText() == slotText
         for _, side in ipairs({ "Left", "Right" }) do
             local line = _G[SCAN_TOOLTIP_NAME .. "Text" .. side .. lineIndex]
             local text = line and line:IsShown() and line:GetText()
-            if text and not (levelPattern and text:match(levelPattern)) then
+            if text and not (side == "Right" and skipRight) and not (levelPattern and text:match(levelPattern)) then
                 local r, g, b = line:GetTextColor()
                 if r > 0.99 and g < 0.2 and b < 0.2 then
                     return true
@@ -530,6 +535,48 @@ function ns.HasRedText(link)
         end
     end
     return false
+end
+
+local WEAPON_CLASS = 2
+
+-- Weapon subclasses each class can learn from a weapon master in Classic Era. Until the skill is
+-- learned, the tooltip shows the weapon type in red. Later clients teach every weapon skill on
+-- their own, and their class weapon lists differ, so this only applies before The Burning Crusade.
+local LEARNABLE_WEAPONS
+if select(4, GetBuildInfo()) < 20000 then
+    local function Set(...)
+        local set = {}
+        for _, subclassID in ipairs({ ... }) do
+            set[subclassID] = true
+        end
+        return set
+    end
+    -- 0 axe, 1 two-hand axe, 2 bow, 3 gun, 4 mace, 5 two-hand mace, 6 polearm, 7 sword,
+    -- 8 two-hand sword, 10 staff, 13 fist weapon, 15 dagger, 16 thrown, 18 crossbow, 19 wand
+    LEARNABLE_WEAPONS = {
+        WARRIOR = Set(0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 13, 15, 16, 18),
+        PALADIN = Set(0, 1, 4, 5, 6, 7, 8),
+        HUNTER = Set(0, 1, 2, 3, 6, 7, 8, 10, 13, 15, 16, 18),
+        ROGUE = Set(2, 3, 4, 7, 13, 15, 16, 18),
+        PRIEST = Set(4, 10, 15, 19),
+        SHAMAN = Set(0, 1, 4, 5, 10, 13, 15),
+        MAGE = Set(7, 10, 15, 19),
+        WARLOCK = Set(7, 10, 15, 19),
+        DRUID = Set(4, 5, 10, 13, 15),
+    }
+end
+
+-- Tooltip slot text, such as "One-Hand", if the character can learn the weapon's skill.
+-- The weapon type next to it may then be red without the weapon counting as not equippable.
+local function LearnableWeaponSlotText(classID, subclassID, equipLoc)
+    if not LEARNABLE_WEAPONS or classID ~= WEAPON_CLASS or not subclassID or not equipLoc then
+        return nil
+    end
+    local _, class = UnitClass("player")
+    local learnable = LEARNABLE_WEAPONS[class]
+    if learnable and learnable[subclassID] then
+        return _G[equipLoc]
+    end
 end
 
 local ARMOR_CLASS = 4
@@ -717,7 +764,8 @@ function ns.DescribeItem(link, roll)
         owned = IsOwned(link),
         zoneType = zoneType or "none",
         finderGroup = LE_PARTY_CATEGORY_INSTANCE ~= nil and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) == true,
-        equippable = EQUIP_SLOTS[equipLoc] ~= nil and not ns.HasRedText(link),
+        equippable = EQUIP_SLOTS[equipLoc] ~= nil
+            and not ns.HasRedText(link, LearnableWeaponSlotText(classID, subclassID, equipLoc)),
         ownArmorType = IsOwnArmorType(classID, subclassID, equipLoc),
         itemLevel = itemLevel,
         equippedLevel = equippedLevel,
