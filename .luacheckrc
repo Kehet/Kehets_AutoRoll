@@ -16,6 +16,7 @@ read_globals = {
     "C_PetJournal",
     "CreateFrame",
     "ExpandSkillHeader",
+    "GetBuildInfo",
     "GetDetailedItemLevelInfo",
     "GetInstanceInfo",
     "GetInventoryItemLink",
