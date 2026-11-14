@@ -1,7 +1,8 @@
-local _, ns = ...
+local ADDON_NAME, ns = ...
 
-local AutoRoll = LibStub("AceAddon-3.0"):NewAddon("Kehet's AutoRoll", "AceConsole-3.0", "AceEvent-3.0", "LibKehetsVerbosity-1.0")
+local AutoRoll = { name = "Kehet's AutoRoll" }
 ns.AutoRoll = AutoRoll
+LibStub("LibKehetsVerbosity-2.0"):Embed(AutoRoll, function() return AutoRoll.profile end)
 
 -- Messages the player can turn off or move on the Messages tab. Answers to slash commands always print.
 AutoRoll:RegisterMessageTypes({
@@ -24,51 +25,134 @@ AutoRoll:RegisterMessageTypes({
     },
 })
 
--- Rules are not part of the AceDB defaults: AceDB merges default tables back in on every load,
--- which would bring back rules the user deleted. EnsureRules gives a new profile an empty list instead.
-local defaultSavedVariables = {
-    profile = {
-        enabled = true,
-        autoConfirm = true,
-        autoConfirmDisenchant = true,
-        dryRun = false,
-    },
+-- Rules are not part of the defaults: the defaults are filled in on every load, which would bring
+-- back rules the user deleted. EnsureRules gives a new profile an empty list instead.
+local DEFAULTS = {
+    enabled = true,
+    autoConfirm = true,
+    autoConfirmDisenchant = true,
+    dryRun = false,
 }
+
+local DEFAULT_PROFILE = "Default"
 
 -- Rolls this addon made, so only their bind-on-pickup and disenchant confirmations are accepted automatically
 local pendingRolls = {}
 
-function AutoRoll:OnInitialize()
-    self.db = LibStub("AceDB-3.0"):New("KehetsAutoRollDB", defaultSavedVariables, true)
-    self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileUpdated")
-    self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileUpdated")
-    self.db.RegisterCallback(self, "OnProfileReset", "OnProfileUpdated")
-    self:EnsureRules()
-    self:MigrateMessageSettings()
-
-    self:SetupOptions()
-
-    self:RegisterChatCommand("autoroll", "HandleSlashCommand")
-    self:RegisterChatCommand("kar", "HandleSlashCommand")
+-- Fills in what the profile lacks, without touching what the player has
+local function CopyDefaults(profile)
+    for key, value in pairs(DEFAULTS) do
+        if profile[key] == nil then
+            profile[key] = value
+        end
+    end
 end
 
-function AutoRoll:OnEnable()
-    self:Notify("banner", "Enabled - Use /autoroll or /kar to open the settings, /autoroll on or /autoroll off to turn automatic rolling on or off")
-    self:RegisterEvent("START_LOOT_ROLL")
-    self:RegisterEvent("CONFIRM_LOOT_ROLL")
-    self:RegisterEvent("CANCEL_LOOT_ROLL")
+-- The key AceDB-3.0 saved this character under. Since AceDB minor 40, clients with regional unique names,
+-- such as WoW: Forever, key characters as "Name Surname" instead of "Name - Realm". Older copies of AceDB
+-- may have been loaded instead, so a key of either form that is already saved is used.
+local function GetCharacterKey(profileKeys)
+    local name, surname = UnitNameUnmodified("player")
+    local realmKey = name .. " - " .. GetRealmName()
+    if RegionalUniqueNamesEnabled and RegionalUniqueNamesEnabled() then
+        local regionalKey = surname and (name .. " " .. tostring(surname)) or name
+        if profileKeys[regionalKey] or not profileKeys[realmKey] then
+            return regionalKey
+        end
+    end
+    return realmKey
+end
+
+-- KehetsAutoRollDB keeps the layout of AceDB-3.0, which versions up to 1.6 saved through:
+-- { profileKeys = { ["Name - Realm"] = profileName }, profiles = { [profileName] = profile } }.
+-- Saved rules and settings load as they are, and an older version can still read them.
+function AutoRoll:LoadSavedVariables()
+    if type(KehetsAutoRollDB) ~= "table" then
+        KehetsAutoRollDB = {}
+    end
+    local db = KehetsAutoRollDB
+    if type(db.profileKeys) ~= "table" then
+        db.profileKeys = {}
+    end
+    if type(db.profiles) ~= "table" then
+        db.profiles = {}
+    end
+    self.db = db
+    self.characterKey = GetCharacterKey(db.profileKeys)
+    self:SetProfile(db.profileKeys[self.characterKey] or DEFAULT_PROFILE)
+end
+
+function AutoRoll:SetProfile(name)
+    local profiles = self.db.profiles
+    if type(profiles[name]) ~= "table" then
+        profiles[name] = {}
+    end
+    self.db.profileKeys[self.characterKey] = name
+    self.profileName = name
+    self.profile = profiles[name]
+    self:OnProfileUpdated()
+end
+
+function AutoRoll:GetProfileNames()
+    local names = { [DEFAULT_PROFILE] = true, [self.characterKey] = true }
+    for name in pairs(self.db.profiles) do
+        names[name] = true
+    end
+    local sorted = {}
+    for name in pairs(names) do
+        table.insert(sorted, name)
+    end
+    table.sort(sorted)
+    return sorted
+end
+
+function AutoRoll:CopyProfile(source)
+    local from = self.db.profiles[source]
+    if type(from) ~= "table" or source == self.profileName then
+        return
+    end
+    wipe(self.profile)
+    for key, value in pairs(CopyTable(from)) do
+        self.profile[key] = value
+    end
+    self:OnProfileUpdated()
+end
+
+function AutoRoll:ResetProfile()
+    wipe(self.profile)
+    self:OnProfileUpdated()
+end
+
+-- The profile in use cannot be deleted. Characters that used a deleted profile go back to Default.
+function AutoRoll:DeleteProfile(name)
+    if name == self.profileName then
+        return
+    end
+    self.db.profiles[name] = nil
+    for character, profileName in pairs(self.db.profileKeys) do
+        if profileName == name then
+            self.db.profileKeys[character] = nil
+        end
+    end
+end
+
+function AutoRoll:OnProfileUpdated()
+    CopyDefaults(self.profile)
+    self:EnsureRules()
+    self:MigrateMessageSettings()
+    self:RefreshOptions()
 end
 
 function AutoRoll:EnsureRules()
-    if not self.db.profile.rules then
-        self.db.profile.rules = {}
+    if not self.profile.rules then
+        self.profile.rules = {}
     end
-    ns.MigrateRules(self.db.profile.rules)
+    ns.MigrateRules(self.profile.rules)
 end
 
 -- Print rolls to chat and Debug output were settings of their own before the Messages tab
 function AutoRoll:MigrateMessageSettings()
-    local profile = self.db.profile
+    local profile = self.profile
     if profile.announce ~= nil then
         self:SetMessageShown("roll", profile.announce)
         profile.announce = nil
@@ -79,14 +163,8 @@ function AutoRoll:MigrateMessageSettings()
     end
 end
 
-function AutoRoll:OnProfileUpdated()
-    self:EnsureRules()
-    self:MigrateMessageSettings()
-    self:RefreshOptions()
-end
-
 function AutoRoll:START_LOOT_ROLL(event, rollID)
-    if not self.db.profile.enabled then
+    if not self.profile.enabled then
         return
     end
 
@@ -111,7 +189,7 @@ function AutoRoll:START_LOOT_ROLL(event, rollID)
 end
 
 function AutoRoll:HandleRoll(rollID, item)
-    local rule, index = ns.Evaluate(self.db.profile.rules, item)
+    local rule, index = ns.Evaluate(self.profile.rules, item)
     if not rule then
         self:Announce("No rule matched " .. item.link .. ", roll manually")
         if self:IsMessageShown("debug") then
@@ -123,7 +201,7 @@ function AutoRoll:HandleRoll(rollID, item)
     local action = ns.ACTIONS[rule.action]
     self:Announce(string.format("%s%s|r %s (rule %d: %s)", action.color, action.label, item.link, index, rule.name))
 
-    if action.rollType and not self.db.profile.dryRun then
+    if action.rollType and not self.profile.dryRun then
         pendingRolls[rollID] = true
         RollOnLoot(rollID, action.rollType)
     end
@@ -134,7 +212,7 @@ function AutoRoll:ExplainRules(item)
     local rolls, details = ns.DescribeFacts(item)
     self:Debug(item.link .. ": " .. rolls)
     self:Debug("  " .. details)
-    for index, rule in ipairs(self.db.profile.rules) do
+    for index, rule in ipairs(self.profile.rules) do
         self:Debug(string.format("  %d. %s: %s", index, rule.name, ns.ExplainRule(rule, item) or "matches"))
     end
 end
@@ -146,9 +224,9 @@ function AutoRoll:CONFIRM_LOOT_ROLL(event, rollID, rollType)
         return
     end
 
-    local confirm = self.db.profile.autoConfirm
+    local confirm = self.profile.autoConfirm
     if rollType == ns.ACTIONS.disenchant.rollType then
-        confirm = self.db.profile.autoConfirmDisenchant
+        confirm = self.profile.autoConfirmDisenchant
     end
     if not confirm then
         return
@@ -164,7 +242,7 @@ end
 
 -- Dry run always shows the roll, since the message is the only place it shows what it would have done
 function AutoRoll:Announce(message)
-    if self.db.profile.dryRun then
+    if self.profile.dryRun then
         self:Notify("roll", "|cFF9D9D9D[Dry run]|r " .. message, { force = true })
     else
         self:Notify("roll", message)
@@ -184,7 +262,7 @@ function AutoRoll:TestItem(link)
 
     ns.WhenItemLoaded(link, function()
         local item = ns.DescribeItem(link, { canNeed = true, canGreed = true, canDisenchant = true })
-        local rule, index = ns.Evaluate(self.db.profile.rules, item)
+        local rule, index = ns.Evaluate(self.profile.rules, item)
 
         local rolls, details = ns.DescribeFacts(item)
         self:Print(link .. ": " .. rolls)
@@ -194,7 +272,7 @@ function AutoRoll:TestItem(link)
             self:Print(string.format("Would %s%s|r (rule %d: %s)", action.color, action.label, index, rule.name))
         else
             self:Print("No rule matches, you would roll manually")
-            for ruleIndex, testRule in ipairs(self.db.profile.rules) do
+            for ruleIndex, testRule in ipairs(self.profile.rules) do
                 self:Print(string.format("  %d. %s: %s", ruleIndex, testRule.name, ns.ExplainRule(testRule, item)))
             end
         end
@@ -203,7 +281,7 @@ function AutoRoll:TestItem(link)
 end
 
 function AutoRoll:PrintRules()
-    local rules = self.db.profile.rules
+    local rules = self.profile.rules
     if #rules == 0 then
         self:Print("No rules. Add them, or use the quick rules, on the Rules tab of /autoroll config.")
         return
@@ -221,13 +299,13 @@ function AutoRoll:HandleSlashCommand(input)
     if command == "" or command == "config" then
         self:OpenOptions()
     elseif command == "on" or command == "off" then
-        self.db.profile.enabled = command == "on"
+        self.profile.enabled = command == "on"
         self:RefreshOptions()
-        self:Print(self.db.profile.enabled and "Automatic rolling on." or "Automatic rolling off.")
+        self:Print(self.profile.enabled and "Automatic rolling on." or "Automatic rolling off.")
     elseif command == "dry" then
-        self.db.profile.dryRun = not self.db.profile.dryRun
+        self.profile.dryRun = not self.profile.dryRun
         self:RefreshOptions()
-        self:Print(self.db.profile.dryRun and "Dry run on: rolls are printed but not made." or "Dry run off.")
+        self:Print(self.profile.dryRun and "Dry run on: rolls are printed but not made." or "Dry run off.")
     elseif command == "rules" then
         self:PrintRules()
     elseif command == "test" then
@@ -241,3 +319,30 @@ function AutoRoll:HandleSlashCommand(input)
         self:Print(" '/autoroll test <item link>' to see which rule an item would match")
     end
 end
+
+SLASH_KEHETSAUTOROLL1 = "/autoroll"
+SLASH_KEHETSAUTOROLL2 = "/kar"
+SlashCmdList.KEHETSAUTOROLL = function(input)
+    AutoRoll:HandleSlashCommand(input)
+end
+
+local events = CreateFrame("Frame")
+events:RegisterEvent("ADDON_LOADED")
+events:RegisterEvent("PLAYER_LOGIN")
+events:SetScript("OnEvent", function(self, event, ...)
+    if event == "ADDON_LOADED" then
+        if ... == ADDON_NAME then
+            self:UnregisterEvent("ADDON_LOADED")
+            AutoRoll:LoadSavedVariables()
+            AutoRoll:SetupOptions()
+        end
+    elseif event == "PLAYER_LOGIN" then
+        self:UnregisterEvent("PLAYER_LOGIN")
+        AutoRoll:Notify("banner", "Enabled - Use /autoroll or /kar to open the settings, /autoroll on or /autoroll off to turn automatic rolling on or off")
+        self:RegisterEvent("START_LOOT_ROLL")
+        self:RegisterEvent("CONFIRM_LOOT_ROLL")
+        self:RegisterEvent("CANCEL_LOOT_ROLL")
+    else
+        AutoRoll[event](AutoRoll, event, ...)
+    end
+end)
