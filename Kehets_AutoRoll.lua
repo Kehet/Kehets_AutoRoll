@@ -1,6 +1,6 @@
 local ADDON_NAME, ns = ...
 
-local AutoRoll = { name = "Kehet's AutoRoll" }
+local AutoRoll = { name = "Kehet's AutoRoll", chatPrefix = "|cFF009900AutoRoll|r: " }
 ns.AutoRoll = AutoRoll
 LibStub("LibKehetsVerbosity-2.0"):Embed(AutoRoll, function() return AutoRoll.profile end)
 
