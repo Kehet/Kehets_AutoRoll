@@ -1,21 +1,21 @@
--- Settings window: general toggles, the rule editor and profiles, built from native frame templates.
--- The message settings are a page of LibKehetsVerbosity-2.0 in Options > AddOns.
+-- Settings pages in Options > AddOns: general toggles, the rule editor and profiles, built from native
+-- frame templates. The message settings are a page of LibKehetsVerbosity-2.0 under the same category.
 local _, ns = ...
 local AutoRoll = ns.AutoRoll
 
 local DISPLAY_NAME = "Kehet's AutoRoll"
 
-local FRAME_WIDTH = 860
-local FRAME_HEIGHT = 580
-local LIST_WIDTH = 220
-local EDITOR_WIDTH = FRAME_WIDTH - LIST_WIDTH - 90
+-- The settings canvas is about 665 pixels wide at the default size of the settings panel
+local PAGE_WIDTH = 640
+local LIST_WIDTH = 170
+local EDITOR_WIDTH = 420
 local LIST_ROW_HEIGHT = 22
 local MENU_MAX_HEIGHT = 400
 
 local BOOLEAN_VALUES = { yes = "Yes", no = "No" }
 local BOOLEAN_ORDER = { "yes", "no" }
 
-local frame
+local pages = {}
 local selectedRule -- nil shows the overview with the quick rules
 
 local function ShowTooltip(control)
@@ -268,8 +268,8 @@ end
 local function SelectRule(index)
     selectedRule = index
     AutoRoll:RefreshOptions()
-    if frame then
-        frame.rulesTab.editorScroll:SetVerticalScroll(0)
+    if pages.rules and pages.rules.body.editorScroll then
+        pages.rules.body.editorScroll:SetVerticalScroll(0)
     end
 end
 
@@ -311,16 +311,10 @@ local function BuildGeneralTab(tab)
         tab.toggles[index] = check
     end
 
-    tab.messagesHelp = CreateText(tab, "GameFontHighlight", FRAME_WIDTH - 48)
+    tab.messagesHelp = CreateText(tab, "GameFontHighlight", PAGE_WIDTH - 32)
     tab.messagesHelp:SetPoint("TOPLEFT", 20, -16 - #GENERAL_TOGGLES * 30 - 20)
-    tab.messagesHelp:SetText("Choose which messages the addon shows, and where, in Options > AddOns > "
-        .. DISPLAY_NAME .. " > Messages.")
-
-    tab.messages = CreateButton(tab, "Message settings", 160, function()
-        frame:Hide()
-        AutoRoll:OpenMessagePage()
-    end)
-    tab.messages:SetPoint("TOPLEFT", tab.messagesHelp, "BOTTOMLEFT", 0, -8)
+    tab.messagesHelp:SetText("The rules are on the Rules page and the message settings on the Messages page,"
+        .. " both listed under " .. DISPLAY_NAME .. ".")
 end
 
 local function RefreshGeneralTab(tab)
@@ -392,7 +386,7 @@ local function BuildOverview(tab)
 
     overview.quickButtons = {}
     for quickIndex, quick in ipairs(ns.QUICK_RULES) do
-        local button = CreateButton(overview, quick.label, 270, function()
+        local button = CreateButton(overview, quick.label, 205, function()
             local rules = AutoRoll.profile.rules
             local position = quick.top and 1 or #rules + 1
             for _, rule in ipairs(quick.rules) do
@@ -432,7 +426,7 @@ local function RefreshOverview(tab, rules)
         local column = (quickIndex - 1) % 2
         local row = math.floor((quickIndex - 1) / 2)
         button:ClearAllPoints()
-        button:SetPoint("TOPLEFT", column * 280, y - row * 28)
+        button:SetPoint("TOPLEFT", column * 215, y - row * 28)
         button:SetEnabled(not HasAllRules(rules, button.quick.rules))
     end
     y = y - math.ceil(#overview.quickButtons / 2) * 28
@@ -447,35 +441,34 @@ local function GetConditionRow(editor, index)
     end
 
     row = CreateFrame("Frame", nil, editor)
-    row:SetSize(EDITOR_WIDTH, 44)
+    row:SetSize(EDITOR_WIDTH, 72)
 
     row.title = CreateText(row, "GameFontNormalSmall")
     row.title:SetPoint("TOPLEFT", 2, 0)
 
-    row.type = CreateDropdown(row, 160)
+    row.type = CreateDropdown(row, 180)
     row.type:SetPoint("TOPLEFT", 0, -14)
     row.op = CreateDropdown(row, 120)
     row.op:SetPoint("LEFT", row.type, "RIGHT", 8, 0)
-    row.valueDropdown = CreateDropdown(row, 160)
-    row.valueBox = CreateEditBox(row, 154, function(text)
+    row.valueDropdown = CreateDropdown(row, 250)
+    row.valueBox = CreateEditBox(row, 244, function(text)
         row.commitValue(text)
     end)
     row.remove = CreateButton(row, "Remove", 80, function()
         row.removeCondition()
     end)
-    row.remove:SetPoint("TOPLEFT", 464, -14)
+    row.remove:SetPoint("TOPLEFT", 332, -14)
 
     editor.conditionRows[index] = row
     return row
 end
 
 local function RefreshConditionValue(row, condition, def)
-    -- Boolean conditions have no comparison, so the value takes its place
-    local x = def.kind == "boolean" and 168 or 296
+    -- The value is on its own line under the check, since the settings canvas is narrow
     row.valueDropdown:ClearAllPoints()
-    row.valueDropdown:SetPoint("TOPLEFT", x, -14)
+    row.valueDropdown:SetPoint("TOPLEFT", 0, -44)
     row.valueBox:ClearAllPoints()
-    row.valueBox:SetPoint("TOPLEFT", x + 6, -15)
+    row.valueBox:SetPoint("TOPLEFT", 6, -45)
 
     local operator = ns.OPERATORS[condition.op]
     local isSet = operator and operator.isSet
@@ -587,7 +580,7 @@ local function BuildRuleEditor(tab)
 
     editor.nameLabel = CreateText(editor, "GameFontNormalSmall")
     editor.nameLabel:SetText("Name")
-    editor.name = CreateEditBox(editor, 220, function(text)
+    editor.name = CreateEditBox(editor, 190, function(text)
         editor.rule.name = text
         AutoRoll:RefreshOptions()
     end)
@@ -659,13 +652,13 @@ local function RefreshRuleEditor(tab, rules, index)
     editor.nameLabel:ClearAllPoints()
     editor.nameLabel:SetPoint("TOPLEFT", 2, y)
     editor.actionLabel:ClearAllPoints()
-    editor.actionLabel:SetPoint("TOPLEFT", 244, y)
+    editor.actionLabel:SetPoint("TOPLEFT", 214, y)
     y = y - 14
     editor.name:ClearAllPoints()
     editor.name:SetPoint("TOPLEFT", 6, y)
     SetEditBoxText(editor.name, rule.name)
     editor.action:ClearAllPoints()
-    editor.action:SetPoint("TOPLEFT", 244, y + 1)
+    editor.action:SetPoint("TOPLEFT", 214, y + 1)
     SetDropdown(editor.action,
         function() return SortedEntries(ActionValues(), ns.ACTION_ORDER) end,
         function(key) return rule.action == key end,
@@ -709,7 +702,7 @@ local function BuildRulesTab(tab)
     -- The rule list, like the list of the AddOns window
     tab.list = CreateFrame("Frame", nil, tab, "WowScrollBoxList")
     tab.list:SetPoint("TOPLEFT", 6, -6)
-    tab.list:SetPoint("BOTTOMLEFT", 6, 6)
+    tab.list:SetPoint("BOTTOMLEFT", 6, 40)
     tab.list:SetWidth(LIST_WIDTH)
     tab.listBar = CreateFrame("EventFrame", nil, tab, "MinimalScrollBar")
     tab.listBar:SetPoint("TOPLEFT", tab.list, "TOPRIGHT", 4, -3)
@@ -726,7 +719,6 @@ local function BuildRulesTab(tab)
     tab.divider:SetPoint("TOPLEFT", tab.list, "TOPRIGHT", 22, 0)
     tab.divider:SetPoint("BOTTOMLEFT", tab.list, "BOTTOMRIGHT", 22, 0)
 
-    -- In the button bar along the bottom of the window
     tab.add = CreateButton(tab, "Add rule", 120, function()
         local rules = AutoRoll.profile.rules
         table.insert(rules, {
@@ -737,11 +729,11 @@ local function BuildRulesTab(tab)
         })
         SelectRule(#rules)
     end)
-    tab.add:SetPoint("BOTTOMLEFT", tab:GetParent(), "BOTTOMLEFT", 4, 3)
+    tab.add:SetPoint("BOTTOMLEFT", 6, 10)
 
     tab.editorScroll, tab.editorContent = CreateScrollArea(tab, EDITOR_WIDTH)
     tab.editorScroll:SetPoint("TOPLEFT", tab.divider, "TOPRIGHT", 12, -6)
-    tab.editorScroll:SetPoint("BOTTOMLEFT", tab.divider, "BOTTOMRIGHT", 12, 6)
+    tab.editorScroll:SetPoint("BOTTOMLEFT", tab.divider, "BOTTOMRIGHT", 12, -34)
     tab.editorScroll:SetWidth(EDITOR_WIDTH)
 
     BuildOverview(tab)
@@ -770,7 +762,7 @@ end
 -- Profiles tab
 
 local function BuildProfilesTab(tab)
-    local width = FRAME_WIDTH - 48
+    local width = PAGE_WIDTH - 32
 
     tab.help = CreateText(tab, "GameFontHighlight", width)
     tab.help:SetPoint("TOPLEFT", 20, -16)
@@ -870,140 +862,74 @@ local function RefreshProfilesTab(tab)
     end)
 end
 
--- Window
+-- Settings pages: Kehet's AutoRoll holds the general toggles, with Rules, Profiles and Messages under it
 
-local TABS = {
-    { label = "General", build = BuildGeneralTab, refresh = RefreshGeneralTab },
-    { label = "Rules", build = BuildRulesTab, refresh = RefreshRulesTab },
-    { label = "Profiles", build = BuildProfilesTab, refresh = RefreshProfilesTab },
+local PAGES = {
+    { key = "general", build = BuildGeneralTab, refresh = RefreshGeneralTab },
+    { key = "rules", label = "Rules", build = BuildRulesTab, refresh = RefreshRulesTab },
+    { key = "profiles", label = "Profiles", build = BuildProfilesTab, refresh = RefreshProfilesTab },
 }
 
-local function SelectTab(index)
-    frame.selectedTab = index
-    PanelTemplates_SetTab(frame, index)
-    for i, tab in ipairs(frame.Tabs) do
-        tab.panel:SetShown(i == index)
-    end
-    AutoRoll:RefreshOptions()
-end
-
-local function CreateOptionsFrame()
-    -- The window of the AddOns list: a title bar, an inset for the content and a button bar along the bottom
-    frame = CreateFrame("Frame", "KehetsAutoRollFrame", UIParent, "ButtonFrameTemplate")
-    if ButtonFrameTemplate_HidePortrait then
-        ButtonFrameTemplate_HidePortrait(frame)
-    end
-    if ButtonFrameTemplate_HideAttic then
-        ButtonFrameTemplate_HideAttic(frame)
-    end
-    frame:SetSize(FRAME_WIDTH, FRAME_HEIGHT)
-    frame:SetPoint("CENTER")
-    -- Below DIALOG, so the confirmation dialogs show on top of the window
-    frame:SetFrameStrata("HIGH")
-    frame:SetToplevel(true)
-    frame:SetMovable(true)
-    frame:SetClampedToScreen(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-    frame:Hide()
-
-    -- Close with Escape
-    table.insert(UISpecialFrames, frame:GetName())
-
-    if frame.SetTitle then
-        frame:SetTitle(DISPLAY_NAME)
-    elseif frame.TitleText then
-        frame.TitleText:SetText(DISPLAY_NAME)
-    end
-
-    -- Tabs hang below the window, like the character and spellbook frames
-    frame.Tabs = {}
-    for i, def in ipairs(TABS) do
-        local tab = CreateFrame("Button", frame:GetName() .. "Tab" .. i, frame, "PanelTabButtonTemplate")
-        tab:SetID(i)
-        tab:SetText(def.label)
-        PanelTemplates_TabResize(tab, 0)
-        if i == 1 then
-            tab:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 11, 2)
-        else
-            tab:SetPoint("TOPLEFT", frame.Tabs[i - 1], "TOPRIGHT", 3, 0)
-        end
-        tab:SetScript("OnClick", function()
-            SelectTab(i)
-        end)
-
-        tab.panel = CreateFrame("Frame", nil, frame)
-        tab.panel:SetAllPoints(frame.Inset)
-        tab.panel:Hide()
-        def.build(tab.panel)
-
-        frame.Tabs[i] = tab
-    end
-    PanelTemplates_SetNumTabs(frame, #frame.Tabs)
-    frame.generalTab = frame.Tabs[1].panel
-    frame.rulesTab = frame.Tabs[2].panel
-    frame.profilesTab = frame.Tabs[3].panel
-    frame.selectedTab = 1
-
-    frame:SetScript("OnShow", function()
-        SelectTab(frame.selectedTab)
-    end)
-end
-
-function AutoRoll:RefreshOptions()
-    if not frame or not frame:IsShown() then
-        return
-    end
-    local index = frame.selectedTab
-    TABS[index].refresh(frame.Tabs[index].panel)
-end
-
-function AutoRoll:OpenOptions()
-    if not frame then
-        CreateOptionsFrame()
-    end
-    frame:Show()
-    frame:Raise()
-end
-
--- Options > AddOns gets a page that opens the window, with the message settings under it
-local function CreateSettingsPage()
+-- A page with the title and divider of the native settings pages. The body is built when the page is first shown.
+local function CreatePage(def)
     local page = CreateFrame("Frame")
-    page.name = DISPLAY_NAME
+    page.name = def.label or DISPLAY_NAME
+    page.def = def
 
-    page.title = page:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    page.title:SetPoint("TOPLEFT", 16, -16)
-    page.title:SetText(DISPLAY_NAME)
+    page.title = page:CreateFontString(nil, "ARTWORK", "GameFontHighlightHuge")
+    page.title:SetPoint("TOPLEFT", 7, -22)
+    page.title:SetText(def.label or DISPLAY_NAME)
 
-    page.help = CreateText(page, "GameFontHighlight", 560)
-    page.help:SetPoint("TOPLEFT", page.title, "BOTTOMLEFT", 0, -12)
-    page.help:SetText("The rules and settings are in their own window. Open it here, or with /autoroll."
-        .. " The message settings are on the Messages page below this one.")
+    page.divider = page:CreateTexture(nil, "ARTWORK")
+    page.divider:SetAtlas("Options_HorizontalDivider", true)
+    page.divider:SetPoint("TOP", 0, -50)
 
-    page.open = CreateButton(page, "Open " .. DISPLAY_NAME, 200, function()
-        if SettingsPanel and SettingsPanel:IsShown() then
-            HideUIPanel(SettingsPanel)
+    page:SetScript("OnShow", function(self)
+        if not self.body then
+            self.body = CreateFrame("Frame", nil, self)
+            self.body:SetPoint("TOPLEFT", 0, -56)
+            self.body:SetPoint("BOTTOMRIGHT")
+            def.build(self.body)
         end
-        if InterfaceOptionsFrame and InterfaceOptionsFrame:IsShown() then
-            HideUIPanel(InterfaceOptionsFrame)
-        end
-        AutoRoll:OpenOptions()
+        def.refresh(self.body)
     end)
-    page.open:SetPoint("TOPLEFT", page.help, "BOTTOMLEFT", 0, -12)
 
+    pages[def.key] = page
     return page
 end
 
+function AutoRoll:RefreshOptions()
+    for _, def in ipairs(PAGES) do
+        local page = pages[def.key]
+        if page and page.body and page:IsVisible() then
+            def.refresh(page.body)
+        end
+    end
+end
+
+function AutoRoll:OpenOptions()
+    if self.settingsCategory and Settings and Settings.OpenToCategory then
+        Settings.OpenToCategory(self.settingsCategory:GetID())
+    elseif InterfaceOptionsFrame_OpenToCategory then
+        InterfaceOptionsFrame_OpenToCategory(pages.general)
+    end
+end
+
 function AutoRoll:SetupOptions()
-    local page = CreateSettingsPage()
     if Settings and Settings.RegisterCanvasLayoutCategory then
-        local category = Settings.RegisterCanvasLayoutCategory(page, DISPLAY_NAME)
+        local category = Settings.RegisterCanvasLayoutCategory(CreatePage(PAGES[1]), DISPLAY_NAME)
+        for index = 2, #PAGES do
+            Settings.RegisterCanvasLayoutSubcategory(category, CreatePage(PAGES[index]), PAGES[index].label)
+        end
         Settings.RegisterAddOnCategory(category)
+        self.settingsCategory = category
         self:RegisterMessagePage(category)
-    else
-        if InterfaceOptions_AddCategory then
+    elseif InterfaceOptions_AddCategory then
+        for _, def in ipairs(PAGES) do
+            local page = CreatePage(def)
+            if def.label then
+                page.parent = DISPLAY_NAME
+            end
             InterfaceOptions_AddCategory(page)
         end
         self:RegisterMessagePage()

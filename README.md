@@ -41,7 +41,7 @@ For Item level vs equipped, a value below 0 means the item is worse than what yo
 
 ## Quick rules
 
-A new profile has no rules, so the addon does not roll until you add one. The overview at the top of the Rules tab has buttons that add ready-made rules. Halt rules go to the top of the list, so they are checked before any rule that rolls. The other rules go to the end.
+A new profile has no rules, so the addon does not roll until you add one. The overview at the top of the Rules page has buttons that add ready-made rules. Halt rules go to the top of the list, so they are checked before any rule that rolls. The other rules go to the end.
 
 | Button | Adds |
 |---|---|
@@ -55,7 +55,7 @@ A button is disabled when its rules are already in the list. You can edit, reord
 
 ## Settings
 
-Open the settings window with `/autoroll`, or with the button in Options > AddOns > Kehet's AutoRoll. The window has the tabs General, Rules and Profiles.
+Open the settings with `/autoroll`, or open Options > AddOns > Kehet's AutoRoll. The Rules, Profiles and Messages pages are listed under it.
 
 | Setting | Default | Effect |
 |---|---|---|
@@ -64,7 +64,7 @@ Open the settings window with `/autoroll`, or with the button in Options > AddOn
 | Confirm disenchant rolls | On | Accept the disenchant question for rolls that the addon makes. Rolls you make yourself still ask. |
 | Dry run | Off | Check the rules and print what would be rolled, but do not roll. Roll messages are always on in dry run. |
 
-The message settings are in Options > AddOns > Kehet's AutoRoll > Messages. The Message settings button on the General tab opens them. They have the messages that the addon shows by itself:
+The Messages page has the messages that the addon shows by itself:
 
 | Message | Default | Content |
 |---|---|---|
@@ -79,7 +79,7 @@ For each message you can set:
 
 Mute all messages turns all of them off. Answers to slash commands always print.
 
-Settings and rules are saved in profiles. By default all characters share the Default profile. Use the Profiles tab to give a character its own rules.
+Settings and rules are saved in profiles. By default all characters share the Default profile. Use the Profiles page to give a character its own rules.
 
 ## Commands
 

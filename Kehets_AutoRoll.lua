@@ -283,7 +283,7 @@ end
 function AutoRoll:PrintRules()
     local rules = self.profile.rules
     if #rules == 0 then
-        self:Print("No rules. Add them, or use the quick rules, on the Rules tab of /autoroll config.")
+        self:Print("No rules. Add them, or use the quick rules, on the Rules page of /autoroll.")
         return
     end
     for index, rule in ipairs(rules) do
