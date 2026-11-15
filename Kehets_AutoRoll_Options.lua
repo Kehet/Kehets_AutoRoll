@@ -8,20 +8,15 @@ local DISPLAY_NAME = "Kehet's AutoRoll"
 local FRAME_WIDTH = 860
 local FRAME_HEIGHT = 580
 local LIST_WIDTH = 220
-local EDITOR_WIDTH = FRAME_WIDTH - LIST_WIDTH - 72
+local EDITOR_WIDTH = FRAME_WIDTH - LIST_WIDTH - 90
 local LIST_ROW_HEIGHT = 22
-local POPUP_ROW_HEIGHT = 18
-local POPUP_MAX_ROWS = 16
+local MENU_MAX_HEIGHT = 400
 
 local BOOLEAN_VALUES = { yes = "Yes", no = "No" }
 local BOOLEAN_ORDER = { "yes", "no" }
 
 local frame
 local selectedRule -- nil shows the overview with the quick rules
-
-local function HasTemplate(name)
-    return C_XMLUtil ~= nil and C_XMLUtil.GetTemplateInfo ~= nil and C_XMLUtil.GetTemplateInfo(name) ~= nil
-end
 
 local function ShowTooltip(control)
     if control.tooltip then
@@ -35,8 +30,11 @@ end
 local function SetTooltip(control, title, text)
     control.tooltipTitle = title
     control.tooltip = text
-    control:SetScript("OnEnter", ShowTooltip)
-    control:SetScript("OnLeave", GameTooltip_Hide)
+    if not control.tooltipHooked then
+        control.tooltipHooked = true
+        control:HookScript("OnEnter", ShowTooltip)
+        control:HookScript("OnLeave", GameTooltip_Hide)
+    end
 end
 
 local CONFIRM_DIALOG = "KEHETS_AUTOROLL_CONFIRM"
@@ -164,170 +162,58 @@ local function SortedEntries(values, order, byKey)
     return entries
 end
 
--- The list that opens under a dropdown. One list is shared, since only one can be open.
-local popup
-
-local function UpdatePopupChecks()
-    for _, row in ipairs(popup.rows) do
-        if row:IsShown() then
-            row.check:SetShown(popup.owner.isSelected(row.key))
-        end
-    end
-end
-
-local function CreatePopup()
-    local template = HasTemplate("TooltipBackdropTemplate") and "TooltipBackdropTemplate" or "BackdropTemplate"
-    popup = CreateFrame("Frame", "KehetsAutoRollDropdownList", UIParent, template)
-    if template == "BackdropTemplate" then
-        popup:SetBackdrop({
-            bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-            tile = true,
-            tileSize = 16,
-            edgeSize = 16,
-            insets = { left = 4, right = 4, top = 4, bottom = 4 },
-        })
-        popup:SetBackdropColor(0.05, 0.05, 0.05, 0.95)
-    end
-    popup:SetFrameStrata("FULLSCREEN_DIALOG")
-    popup:SetClampedToScreen(true)
-    popup:EnableMouse(true)
-    popup:Hide()
-
-    popup.scroll = CreateFrame("ScrollFrame", nil, popup, "UIPanelScrollFrameTemplate")
-    popup.scroll:SetPoint("TOPLEFT", 6, -6)
-    popup.scroll:SetPoint("BOTTOMRIGHT", -6, 6)
-    popup.content = CreateFrame("Frame", nil, popup.scroll)
-    popup.content:SetSize(1, 1)
-    popup.scroll:SetScrollChild(popup.content)
-    popup.rows = {}
-
-    -- A click anywhere else closes the list
-    popup:SetScript("OnUpdate", function(self)
-        if (IsMouseButtonDown("LeftButton") or IsMouseButtonDown("RightButton"))
-            and not self:IsMouseOver() and not (self.owner and self.owner:IsMouseOver()) then
-            self:Hide()
-        end
-    end)
-    popup:SetScript("OnHide", function(self)
-        self.owner = nil
-    end)
-end
-
-local function GetPopupRow(index)
-    local row = popup.rows[index]
-    if row then
-        return row
-    end
-
-    row = CreateFrame("Button", nil, popup.content)
-    row:SetHeight(POPUP_ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", 0, -(index - 1) * POPUP_ROW_HEIGHT)
-    row:SetPoint("RIGHT", popup.content, "RIGHT")
-    row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-
-    row.check = row:CreateTexture(nil, "ARTWORK")
-    row.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
-    row.check:SetSize(16, 16)
-    row.check:SetPoint("LEFT", 2, 0)
-
-    row.text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    row.text:SetPoint("LEFT", 20, 0)
-    row.text:SetPoint("RIGHT", -4, 0)
-    row.text:SetJustifyH("LEFT")
-    row.text:SetWordWrap(false)
-
-    row:SetScript("OnClick", function(self)
-        local owner = popup.owner
-        if not owner.multi then
-            popup:Hide()
-        end
-        owner.onSelect(self.key)
-        if popup:IsShown() then
-            UpdatePopupChecks()
-        end
-    end)
-
-    popup.rows[index] = row
-    return row
-end
-
-local function TogglePopup(dropdown)
-    if not popup then
-        CreatePopup()
-    end
-    if popup:IsShown() and popup.owner == dropdown then
-        popup:Hide()
-        return
-    end
-
-    local entries = dropdown.getEntries()
-    popup.owner = dropdown
-    for index, entry in ipairs(entries) do
-        local row = GetPopupRow(index)
-        row.key = entry.key
-        row.text:SetText(entry.label)
-        row:Show()
-    end
-    for index = #entries + 1, #popup.rows do
-        popup.rows[index]:Hide()
-    end
-
-    local visibleRows = math.min(math.max(#entries, 1), POPUP_MAX_ROWS)
-    local scrolls = #entries > POPUP_MAX_ROWS
-    local width = math.max(dropdown:GetWidth(), 160)
-    popup:SetSize(width, visibleRows * POPUP_ROW_HEIGHT + 12)
-    popup.scroll:SetPoint("BOTTOMRIGHT", scrolls and -28 or -6, 6)
-    if popup.scroll.ScrollBar then
-        popup.scroll.ScrollBar:SetShown(scrolls)
-    end
-    popup.content:SetSize(width - (scrolls and 34 or 12), math.max(#entries, 1) * POPUP_ROW_HEIGHT)
-    popup.scroll:SetVerticalScroll(0)
-
-    popup:ClearAllPoints()
-    popup:SetPoint("TOPLEFT", dropdown, "BOTTOMLEFT", 0, 2)
-    popup:Show()
-    UpdatePopupChecks()
-end
-
+-- Dropdowns use the native menu system, like the dropdowns of the game windows
 local function CreateDropdown(parent, width)
-    local dropdown = CreateButton(parent, "", width, TogglePopup)
-    local text = dropdown:GetFontString()
-    text:ClearAllPoints()
-    text:SetPoint("LEFT", 8, 0)
-    text:SetPoint("RIGHT", -20, 0)
-    text:SetJustifyH("LEFT")
-    text:SetWordWrap(false)
-
-    dropdown.arrow = dropdown:CreateTexture(nil, "OVERLAY")
-    dropdown.arrow:SetTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
-    dropdown.arrow:SetSize(18, 18)
-    dropdown.arrow:SetPoint("RIGHT", -2, 0)
+    local dropdown = CreateFrame("DropdownButton", nil, parent, "WowStyle1DropdownTemplate")
+    dropdown:SetWidth(width)
     return dropdown
 end
 
--- getEntries returns { { key, label } }; a multi dropdown keeps its list open and toggles each entry
+-- getEntries returns { { key, label } }. A multi dropdown has checkboxes and stays open while they are toggled,
+-- the others have radio buttons. A multi menu is not generated again while it is open, so a toggle keeps it open.
 local function SetDropdown(dropdown, getEntries, isSelected, onSelect, multi)
-    dropdown.getEntries = getEntries
-    dropdown.isSelected = isSelected
-    dropdown.onSelect = onSelect
-    dropdown.multi = multi
-
-    local labels = {}
-    for _, entry in ipairs(getEntries()) do
-        if isSelected(entry.key) then
-            table.insert(labels, entry.label)
-        end
+    dropdown:SetDefaultText("|cFF9D9D9DNone|r")
+    if multi and dropdown:IsMenuOpen() then
+        return
     end
-    dropdown:SetText(#labels > 0 and table.concat(labels, ", ") or "|cFF9D9D9DNone|r")
+    dropdown:SetupMenu(function(_, root)
+        root:SetScrollMode(MENU_MAX_HEIGHT)
+        for _, entry in ipairs(getEntries()) do
+            if multi then
+                root:CreateCheckbox(entry.label, isSelected, onSelect, entry.key)
+            else
+                root:CreateRadio(entry.label, isSelected, onSelect, entry.key)
+            end
+        end
+    end)
 end
 
--- A scrolling area with a content frame that the caller lays out and sizes
+-- A dropdown of actions, such as the profile to copy from. It shows a fixed text instead of a selection.
+local function SetActionDropdown(dropdown, text, getEntries, onPick)
+    local entries = getEntries()
+    dropdown:SetupMenu(function(_, root)
+        root:SetScrollMode(MENU_MAX_HEIGHT)
+        for _, entry in ipairs(entries) do
+            root:CreateButton(entry.label, onPick, entry.key)
+        end
+    end)
+    dropdown:OverrideText(text)
+    dropdown:SetEnabled(#entries > 0)
+end
+
+-- A scroll frame with the minimal scroll bar of the game windows, hidden when there is nothing to scroll
 local function CreateScrollArea(parent, width)
-    local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    local scroll = CreateFrame("ScrollFrame", nil, parent)
+    scroll:EnableMouseWheel(true)
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(width, 1)
     scroll:SetScrollChild(content)
+
+    scroll.ScrollBar = CreateFrame("EventFrame", nil, parent, "MinimalScrollBar")
+    scroll.ScrollBar:SetPoint("TOPLEFT", scroll, "TOPRIGHT", 8, 0)
+    scroll.ScrollBar:SetPoint("BOTTOMLEFT", scroll, "BOTTOMRIGHT", 8, 0)
+    scroll.ScrollBar:SetHideIfUnscrollable(true)
+    ScrollUtil.InitScrollFrameWithScrollBar(scroll, scroll.ScrollBar)
     return scroll, content
 end
 
@@ -445,36 +331,29 @@ end
 
 -- Rules tab: the rule list on the left, the overview or the selected rule on the right
 
-local function GetListRow(tab, index)
-    local row = tab.listRows[index]
-    if row then
-        return row
+local function InitListRow(row, entry)
+    if not row.text then
+        row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+
+        row.selected = row:CreateTexture(nil, "BACKGROUND")
+        row.selected:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+        row.selected:SetBlendMode("ADD")
+        row.selected:SetVertexColor(1, 0.82, 0)
+        row.selected:SetAllPoints()
+
+        row.text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+        row.text:SetPoint("LEFT", 6, 0)
+        row.text:SetPoint("RIGHT", -4, 0)
+        row.text:SetJustifyH("LEFT")
+        row.text:SetWordWrap(false)
+
+        row:SetScript("OnClick", function(self)
+            SelectRule(self.ruleIndex)
+        end)
     end
-
-    row = CreateFrame("Button", nil, tab.listContent)
-    row:SetHeight(LIST_ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", 0, -(index - 1) * LIST_ROW_HEIGHT)
-    row:SetPoint("RIGHT", tab.listContent, "RIGHT")
-    row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-
-    row.selected = row:CreateTexture(nil, "BACKGROUND")
-    row.selected:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-    row.selected:SetBlendMode("ADD")
-    row.selected:SetVertexColor(1, 0.82, 0)
-    row.selected:SetAllPoints()
-
-    row.text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    row.text:SetPoint("LEFT", 6, 0)
-    row.text:SetPoint("RIGHT", -4, 0)
-    row.text:SetJustifyH("LEFT")
-    row.text:SetWordWrap(false)
-
-    row:SetScript("OnClick", function(self)
-        SelectRule(self.ruleIndex)
-    end)
-
-    tab.listRows[index] = row
-    return row
+    row.ruleIndex = entry.ruleIndex
+    row.text:SetText(entry.label)
+    row.selected:SetShown(entry.ruleIndex == selectedRule)
 end
 
 local function RefreshRuleList(tab, rules)
@@ -486,18 +365,7 @@ local function RefreshRuleList(tab, rules)
         end
         table.insert(entries, { label = label, ruleIndex = index })
     end
-
-    for index, entry in ipairs(entries) do
-        local row = GetListRow(tab, index)
-        row.ruleIndex = entry.ruleIndex
-        row.text:SetText(entry.label)
-        row.selected:SetShown(entry.ruleIndex == selectedRule)
-        row:Show()
-    end
-    for index = #entries + 1, #tab.listRows do
-        tab.listRows[index]:Hide()
-    end
-    tab.listContent:SetHeight(#entries * LIST_ROW_HEIGHT)
+    tab.list:SetDataProvider(CreateDataProvider(entries), ScrollBoxConstants.RetainScrollPosition)
 end
 
 local function BuildOverview(tab)
@@ -584,18 +452,18 @@ local function GetConditionRow(editor, index)
     row.title = CreateText(row, "GameFontNormalSmall")
     row.title:SetPoint("TOPLEFT", 2, 0)
 
-    row.type = CreateDropdown(row, 170)
+    row.type = CreateDropdown(row, 160)
     row.type:SetPoint("TOPLEFT", 0, -14)
     row.op = CreateDropdown(row, 120)
     row.op:SetPoint("LEFT", row.type, "RIGHT", 8, 0)
-    row.valueDropdown = CreateDropdown(row, 170)
-    row.valueBox = CreateEditBox(row, 164, function(text)
+    row.valueDropdown = CreateDropdown(row, 160)
+    row.valueBox = CreateEditBox(row, 154, function(text)
         row.commitValue(text)
     end)
     row.remove = CreateButton(row, "Remove", 80, function()
         row.removeCondition()
     end)
-    row.remove:SetPoint("TOPLEFT", 476, -14)
+    row.remove:SetPoint("TOPLEFT", 464, -14)
 
     editor.conditionRows[index] = row
     return row
@@ -603,7 +471,7 @@ end
 
 local function RefreshConditionValue(row, condition, def)
     -- Boolean conditions have no comparison, so the value takes its place
-    local x = def.kind == "boolean" and 178 or 306
+    local x = def.kind == "boolean" and 168 or 296
     row.valueDropdown:ClearAllPoints()
     row.valueDropdown:SetPoint("TOPLEFT", x, -14)
     row.valueBox:ClearAllPoints()
@@ -838,16 +706,27 @@ local function RefreshRuleEditor(tab, rules, index)
 end
 
 local function BuildRulesTab(tab)
-    local inset = CreateFrame("Frame", nil, tab, HasTemplate("InsetFrameTemplate3") and "InsetFrameTemplate3" or nil)
-    inset:SetPoint("TOPLEFT", 8, -8)
-    inset:SetPoint("BOTTOMLEFT", 8, 40)
-    inset:SetWidth(LIST_WIDTH + 30)
+    -- The rule list, like the list of the AddOns window
+    tab.list = CreateFrame("Frame", nil, tab, "WowScrollBoxList")
+    tab.list:SetPoint("TOPLEFT", 6, -6)
+    tab.list:SetPoint("BOTTOMLEFT", 6, 6)
+    tab.list:SetWidth(LIST_WIDTH)
+    tab.listBar = CreateFrame("EventFrame", nil, tab, "MinimalScrollBar")
+    tab.listBar:SetPoint("TOPLEFT", tab.list, "TOPRIGHT", 4, -3)
+    tab.listBar:SetPoint("BOTTOMLEFT", tab.list, "BOTTOMRIGHT", 4, 2)
+    local view = CreateScrollBoxListLinearView()
+    view:SetElementExtent(LIST_ROW_HEIGHT)
+    view:SetElementInitializer("Button", InitListRow)
+    ScrollUtil.InitScrollBoxListWithScrollBar(tab.list, tab.listBar, view)
+    tab.listBar:SetHideIfUnscrollable(true)
 
-    tab.listScroll, tab.listContent = CreateScrollArea(inset, LIST_WIDTH)
-    tab.listScroll:SetPoint("TOPLEFT", 4, -4)
-    tab.listScroll:SetPoint("BOTTOMRIGHT", -26, 4)
-    tab.listRows = {}
+    tab.divider = tab:CreateTexture(nil, "ARTWORK")
+    tab.divider:SetColorTexture(1, 1, 1, 0.12)
+    tab.divider:SetWidth(1)
+    tab.divider:SetPoint("TOPLEFT", tab.list, "TOPRIGHT", 22, 0)
+    tab.divider:SetPoint("BOTTOMLEFT", tab.list, "BOTTOMRIGHT", 22, 0)
 
+    -- In the button bar along the bottom of the window
     tab.add = CreateButton(tab, "Add rule", 120, function()
         local rules = AutoRoll.profile.rules
         table.insert(rules, {
@@ -858,11 +737,12 @@ local function BuildRulesTab(tab)
         })
         SelectRule(#rules)
     end)
-    tab.add:SetPoint("BOTTOMLEFT", 10, 12)
+    tab.add:SetPoint("BOTTOMLEFT", tab:GetParent(), "BOTTOMLEFT", 4, 3)
 
     tab.editorScroll, tab.editorContent = CreateScrollArea(tab, EDITOR_WIDTH)
-    tab.editorScroll:SetPoint("TOPLEFT", inset, "TOPRIGHT", 16, -8)
-    tab.editorScroll:SetPoint("BOTTOMRIGHT", -30, 12)
+    tab.editorScroll:SetPoint("TOPLEFT", tab.divider, "TOPRIGHT", 12, -6)
+    tab.editorScroll:SetPoint("BOTTOMLEFT", tab.divider, "BOTTOMRIGHT", 12, 6)
+    tab.editorScroll:SetWidth(EDITOR_WIDTH)
 
     BuildOverview(tab)
     BuildRuleEditor(tab)
@@ -975,23 +855,19 @@ local function RefreshProfilesTab(tab)
             AutoRoll:SetProfile(name)
         end)
 
-    SetDropdown(tab.copy, OtherProfileEntries, function() return false end, function(name)
+    SetActionDropdown(tab.copy, "|cFF9D9D9DChoose a profile|r", OtherProfileEntries, function(name)
         Confirm("Copy the profile \"" .. name .. "\" into \"" .. AutoRoll.profileName .. "\"? The rules of \""
             .. AutoRoll.profileName .. "\" are replaced.", function()
             AutoRoll:CopyProfile(name)
         end)
     end)
-    tab.copy:SetText("|cFF9D9D9DChoose a profile|r")
-    tab.copy:SetEnabled(#OtherProfileEntries() > 0)
 
-    SetDropdown(tab.delete, OtherProfileEntries, function() return false end, function(name)
+    SetActionDropdown(tab.delete, "|cFF9D9D9DChoose a profile|r", OtherProfileEntries, function(name)
         Confirm("Delete the profile \"" .. name .. "\"?", function()
             AutoRoll:DeleteProfile(name)
             AutoRoll:RefreshOptions()
         end)
     end)
-    tab.delete:SetText("|cFF9D9D9DChoose a profile|r")
-    tab.delete:SetEnabled(#OtherProfileEntries() > 0)
 end
 
 -- Window
@@ -1003,9 +879,6 @@ local TABS = {
 }
 
 local function SelectTab(index)
-    if popup then
-        popup:Hide()
-    end
     frame.selectedTab = index
     PanelTemplates_SetTab(frame, index)
     for i, tab in ipairs(frame.Tabs) do
@@ -1015,9 +888,14 @@ local function SelectTab(index)
 end
 
 local function CreateOptionsFrame()
-    -- The flat panel is the native window look on clients that have it, with the bronze art on Forever
-    local flat = HasTemplate("DefaultPanelFlatTemplate")
-    frame = CreateFrame("Frame", "KehetsAutoRollFrame", UIParent, flat and "DefaultPanelFlatTemplate" or "BasicFrameTemplate")
+    -- The window of the AddOns list: a title bar, an inset for the content and a button bar along the bottom
+    frame = CreateFrame("Frame", "KehetsAutoRollFrame", UIParent, "ButtonFrameTemplate")
+    if ButtonFrameTemplate_HidePortrait then
+        ButtonFrameTemplate_HidePortrait(frame)
+    end
+    if ButtonFrameTemplate_HideAttic then
+        ButtonFrameTemplate_HideAttic(frame)
+    end
     frame:SetSize(FRAME_WIDTH, FRAME_HEIGHT)
     frame:SetPoint("CENTER")
     -- Below DIALOG, so the confirmation dialogs show on top of the window
@@ -1031,19 +909,13 @@ local function CreateOptionsFrame()
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
     frame:Hide()
 
-    if not frame.CloseButton then
-        frame.CloseButton = CreateFrame("Button", nil, frame, "UIPanelCloseButtonDefaultAnchors")
-    end
-
     -- Close with Escape
     table.insert(UISpecialFrames, frame:GetName())
 
-    if frame.TitleContainer and frame.TitleContainer.TitleText then
-        frame.TitleContainer.TitleText:SetText(DISPLAY_NAME)
-    else
-        frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        frame.title:SetPoint("TOP", 0, -5)
-        frame.title:SetText(DISPLAY_NAME)
+    if frame.SetTitle then
+        frame:SetTitle(DISPLAY_NAME)
+    elseif frame.TitleText then
+        frame.TitleText:SetText(DISPLAY_NAME)
     end
 
     -- Tabs hang below the window, like the character and spellbook frames
@@ -1063,8 +935,7 @@ local function CreateOptionsFrame()
         end)
 
         tab.panel = CreateFrame("Frame", nil, frame)
-        tab.panel:SetPoint("TOPLEFT", 0, -24)
-        tab.panel:SetPoint("BOTTOMRIGHT")
+        tab.panel:SetAllPoints(frame.Inset)
         tab.panel:Hide()
         def.build(tab.panel)
 
@@ -1078,11 +949,6 @@ local function CreateOptionsFrame()
 
     frame:SetScript("OnShow", function()
         SelectTab(frame.selectedTab)
-    end)
-    frame:SetScript("OnHide", function()
-        if popup then
-            popup:Hide()
-        end
     end)
 end
 
