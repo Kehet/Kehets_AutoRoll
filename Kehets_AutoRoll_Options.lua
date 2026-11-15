@@ -873,6 +873,8 @@ local PAGES = {
 -- A page with the title and divider of the native settings pages. The body is built when the page is first shown.
 local function CreatePage(def)
     local page = CreateFrame("Frame")
+    -- An unparented frame starts shown, so the settings panel's first Show() would not fire OnShow
+    page:Hide()
     page.name = def.label or DISPLAY_NAME
     page.def = def
 
