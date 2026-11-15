@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.6.0...1.7.0) (2026-11-15)
+
+
+### Features
+
+* drop the Ace3 dependency ([#29](https://github.com/Kehet/Kehets_AutoRoll/issues/29)) ([69b1fc5](https://github.com/Kehet/Kehets_AutoRoll/commit/69b1fc549b6a3df8df94a68469fc51c616f2ec2c))
+
+
+### Bug Fixes
+
+* **options:** build the settings pages on the first open ([#31](https://github.com/Kehet/Kehets_AutoRoll/issues/31)) ([4581717](https://github.com/Kehet/Kehets_AutoRoll/commit/4581717e86813e186d74affc532c2b8d81b11cef))
+
 ## [1.6.0](https://github.com/Kehet/Kehets_AutoRoll/compare/1.5.1...1.6.0) (2026-11-10)
 
 
